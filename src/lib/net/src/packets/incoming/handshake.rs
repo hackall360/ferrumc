@@ -27,11 +27,14 @@ mod tests {
             next_state: VarInt,
         }
         let mut data = Cursor::new(vec![
-            251, 5, 9, 108, 111, 99, 97, 108, 104, 111, 115, 116, 99, 221, 1,
+            0xfb, 0x05, // protocol version 763 (Minecraft 1.20.1)
+            0x09, b'l', b'o', b'c', b'a', b'l', b'h', b'o', b's', b't', // "localhost"
+            0x63, 0xdd, // server port 25565
+            0x01, // next state: status
         ]);
 
         let handshake = Handshake::decode(&mut data, &NetDecodeOpts::None).unwrap();
-        // The 1.20.1 protocol version is 763; this test uses that value.
+        // The protocol version for Minecraft 1.20.1 is 763; this test uses that value.
         assert_eq!(handshake.protocol_version, VarInt::new(763));
         assert_eq!(handshake.server_address, "localhost".to_string());
         assert_eq!(handshake.server_port, 25565);

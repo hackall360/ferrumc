@@ -14,9 +14,9 @@ use vanilla_chunk_format::BlockData;
 // #[cfg(test)]
 // const BLOCKSFILE: &[u8] = &[0];
 
-// If this file doesn't exist, you'll have to create it yourself. Download the 1.21.1 server from the
-// minecraft launcher, extract the blocks data (info here https://minecraft.wiki/w/Minecraft_Wiki:Projects/wiki.vg_merge/Data_Generators#Blocks_report)
-// , put the blocks.json file in the .etc folder, and run the blocks_parser.py script in the scripts
+// If this file doesn't exist, you'll have to create it yourself. Download the 1.20.1 server JAR from the
+// Minecraft launcher, extract the blocks data (info here https://minecraft.wiki/w/Minecraft_Wiki:Projects/wiki.vg_merge/Data_Generators#Blocks_report),
+// put the blocks.json file in the .etc folder, and run the block_parser.py script in the scripts
 // folder. This will generate the blockmappings.json file that is compressed with bzip2 and included
 // in the binary.
 // #[cfg(not(test))]

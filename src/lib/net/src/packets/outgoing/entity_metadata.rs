@@ -230,8 +230,8 @@ mod extra_data_types {
     use ferrumc_net_codec::net_types::var_int::VarInt;
     use std::io::Write;
     // STANDING = 0, FALL_FLYING = 1, SLEEPING = 2, SWIMMING = 3, SPIN_ATTACK = 4, SNEAKING = 5, LONG_JUMPING = 6, DYING = 7, CROAKING = 8,
-    // USING_TONGUE = 9, SITTING = 10, ROARING = 11, SNIFFING = 12, EMERGING = 13, DIGGING = 14, (1.21.3: SLIDING = 15, SHOOTING = 16,
-    // INHALING = 17
+    // USING_TONGUE = 9, SITTING = 10, ROARING = 11, SNIFFING = 12, EMERGING = 13, DIGGING = 14
+    // Poses introduced after 1.20.1 (SLIDING = 15, SHOOTING = 16, INHALING = 17) are omitted
 
     /// Possible poses/animations an entity can have
     #[derive(Debug, Clone)]
@@ -252,9 +252,6 @@ mod extra_data_types {
         Sniffing,
         Emerging,
         Digging,
-        Sliding,
-        Shooting,
-        Inhaling,
     }
 
     impl EntityPose {
@@ -276,9 +273,6 @@ mod extra_data_types {
                 Sniffing => 12,
                 Emerging => 13,
                 Digging => 14,
-                Sliding => 15,
-                Shooting => 16,
-                Inhaling => 17,
             };
             VarInt::new(val)
         }

@@ -1,4 +1,5 @@
 use crate::conn_init::LoginResult;
+use crate::conn_init::PROTOCOL_VERSION_1_20_1;
 use crate::connection::StreamWriter;
 use crate::errors::{NetError, PacketError};
 use crate::packets::incoming::packet_skeleton::PacketSkeleton;
@@ -159,7 +160,7 @@ fn get_server_status(state: &GlobalState) -> String {
     // Protocol info
     let version = structs::Version {
         name: "1.20.1",
-        protocol: crate::conn_init::PROTOCOL_VERSION_1_20_1 as u16,
+        protocol: PROTOCOL_VERSION_1_20_1 as u16,
     };
 
     // Collect up to 5 players from the active player list

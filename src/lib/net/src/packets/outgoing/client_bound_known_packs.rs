@@ -1,4 +1,4 @@
-use ferrumc_macros::{packet, NetEncode};
+use ferrumc_macros::{NetEncode, packet};
 use ferrumc_net_codec::net_types::length_prefixed_vec::LengthPrefixedVec;
 use std::io::Write;
 
@@ -24,7 +24,7 @@ impl Default for ClientBoundKnownPacksPacket<'_> {
 impl ClientBoundKnownPacksPacket<'_> {
     pub fn new() -> Self {
         Self {
-            packs: LengthPrefixedVec::new(vec![Pack::new("minecraft", "core", "1.21")]),
+            packs: LengthPrefixedVec::new(vec![Pack::new("minecraft", "core", "1.20.1")]),
         }
     }
 }

@@ -60,7 +60,7 @@ pub(crate) fn get_packet_id(
         PacketBoundiness::Serverbound => &packets.serverbound,
     };
     let id = packets.get(&format!("minecraft:{packet_name}"))
-        .unwrap_or_else(|| panic!("Could not find key: `minecraft:{packet_name}` in the packet registry. Example: `add_entity`, would be 0x01 in the 1.21.1 protocol"));
+        .unwrap_or_else(|| panic!("Could not find key: `minecraft:{packet_name}` in the packet registry. Example: `add_entity`, would be 0x01 in the 1.20.1 protocol"));
 
     id.protocol_id
 }

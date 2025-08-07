@@ -1,5 +1,4 @@
-use crate::conn_init::LoginResult;
-use crate::conn_init::PROTOCOL_VERSION_1_20_1;
+use crate::conn_init::{LoginResult, MINECRAFT_VERSION, PROTOCOL_VERSION_1_20_1};
 use crate::connection::StreamWriter;
 use crate::errors::{NetError, PacketError};
 use crate::packets::incoming::packet_skeleton::PacketSkeleton;
@@ -159,7 +158,7 @@ fn get_server_status(state: &GlobalState) -> String {
 
     // Protocol info
     let version = structs::Version {
-        name: "1.20.1",
+        name: MINECRAFT_VERSION,
         protocol: PROTOCOL_VERSION_1_20_1 as u16,
     };
 

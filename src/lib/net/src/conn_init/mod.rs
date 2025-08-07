@@ -3,7 +3,7 @@ mod status;
 
 use crate::conn_init::login::login;
 use crate::conn_init::status::status;
-use crate::connection::StreamWriter;
+use crate::connection::{EncryptedReader, StreamWriter};
 use crate::errors::{NetError, PacketError};
 use crate::packets::incoming::handshake::Handshake;
 use crate::packets::incoming::packet_skeleton::PacketSkeleton;
@@ -14,7 +14,7 @@ use ferrumc_net_codec::net_types::var_int::VarInt;
 use ferrumc_state::GlobalState;
 use ferrumc_text::{ComponentBuilder, NamedColor, TextComponent};
 use std::sync::atomic::Ordering;
-use tokio::net::tcp::OwnedReadHalf;
+use tokio::io::AsyncRead;
 use tracing::{error, trace};
 
 /// Represents the result of a login attempt after the handshake process.
@@ -60,15 +60,15 @@ pub const PROTOCOL_VERSION_1_20_1: i32 = 763;
 /// - An unexpected packet is received.
 /// - Protocol version mismatches and cannot be gracefully handled.
 /// - An invalid or unsupported handshake state is encountered.
-pub async fn handle_handshake(
-    mut conn_read: &mut OwnedReadHalf,
+pub async fn handle_handshake<R: AsyncRead + Unpin>(
+    conn_read: &mut EncryptedReader<R>,
     conn_write: &StreamWriter,
     state: GlobalState,
 ) -> Result<(bool, LoginResult), NetError> {
     // Build a PacketSkeleton from the first inbound packet.
     // This handles framing, reading packet ID and payload.
     let mut skel = PacketSkeleton::new(
-        &mut conn_read,
+        conn_read,
         conn_write.compress.load(Ordering::Relaxed),
         crate::ConnState::Handshake,
     )
@@ -127,9 +127,9 @@ pub async fn handle_handshake(
 ///
 /// # Returns
 /// Always returns `Err(NetError::MismatchedProtocolVersion)` to signal the mismatch.
-async fn handle_version_mismatch(
+async fn handle_version_mismatch<R: AsyncRead + Unpin>(
     hs_packet: Handshake,
-    conn_read: &mut OwnedReadHalf,
+    conn_read: &mut EncryptedReader<R>,
     conn_write: &StreamWriter,
     state: GlobalState,
 ) -> Result<(bool, LoginResult), NetError> {

@@ -1,7 +1,7 @@
 use crate::compression::compress_packet;
 use crate::conn_init::VarInt;
 use crate::conn_init::{LoginResult, NetDecodeOpts};
-use crate::connection::StreamWriter;
+use crate::connection::{EncryptedReader, StreamWriter};
 use crate::errors::{NetError, PacketError};
 use crate::packets::incoming::packet_skeleton::PacketSkeleton;
 use crate::ConnState::*;
@@ -15,7 +15,7 @@ use ferrumc_net_codec::net_types::length_prefixed_vec::LengthPrefixedVec;
 use ferrumc_net_encryption::{decrypt_shared_secret, generate_rsa_keypair, generate_verify_token};
 use ferrumc_state::GlobalState;
 use rsa::pkcs1::EncodeRsaPublicKey;
-use tokio::net::tcp::OwnedReadHalf;
+use tokio::io::AsyncRead;
 use tracing::error;
 use uuid::Uuid;
 
@@ -34,8 +34,8 @@ use uuid::Uuid;
 ///
 /// # Errors
 /// Returns `NetError` for protocol violations, unexpected packets, or I/O errors.
-pub(super) async fn login(
-    conn_read: &mut OwnedReadHalf,
+pub(super) async fn login<R: AsyncRead + Unpin>(
+    conn_read: &mut EncryptedReader<R>,
     conn_write: &StreamWriter,
     state: GlobalState,
 ) -> Result<(bool, LoginResult), NetError> {
@@ -91,13 +91,17 @@ pub(super) async fn login(
         }
         let response = LoginEncryptionResponse::decode(&mut skel.data, &NetDecodeOpts::None)?;
 
-        let shared_secret = decrypt_shared_secret(&private_key, &response.shared_secret)?;
+        let shared_secret_vec = decrypt_shared_secret(&private_key, &response.shared_secret)?;
+        let shared_secret: [u8; 16] = shared_secret_vec
+            .try_into()
+            .map_err(|_| NetError::Misc("Invalid shared secret".to_string()))?;
         let token = decrypt_shared_secret(&private_key, &response.verify_token)?;
         if token != verify_token {
             return Err(NetError::Misc("Invalid verify token".to_string()));
         }
 
         conn_write.enable_encryption(&shared_secret)?;
+        conn_read.enable_encryption(&shared_secret)?;
     }
 
     // =============================================================================================

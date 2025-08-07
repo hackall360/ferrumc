@@ -11,6 +11,9 @@ use std::ops::Not;
 use tracing::warn;
 
 const SECTIONS: usize = 24; // Number of sections, adjust for your Y range (-64 to 319)
+// Heightmap identifiers as defined by the protocol
+const HEIGHTMAP_MOTION_BLOCKING: i32 = 4;
+const HEIGHTMAP_WORLD_SURFACE: i32 = 1;
 
 #[derive(NetEncode)]
 pub struct BlockEntity {
@@ -181,14 +184,16 @@ impl ChunkAndLightData {
             .filter(|section| !section.block_light.is_empty())
             .map(|section| ByteArray::new(section.block_light.clone()))
             .collect();
+        // Heightmaps must be sent using the named protocol IDs
+        // in the order expected by 1.20.1 clients
         let heightmaps = vec![
             NetHeightmap {
-                id: VarInt::new(1), // Placeholder for heightmap ID
-                data: LengthPrefixedVec::new(chunk.heightmaps.world_surface.clone()),
+                id: VarInt::new(HEIGHTMAP_MOTION_BLOCKING),
+                data: LengthPrefixedVec::new(chunk.heightmaps.motion_blocking.clone()),
             },
             NetHeightmap {
-                id: VarInt::new(4), // Placeholder for heightmap ID
-                data: LengthPrefixedVec::new(chunk.heightmaps.motion_blocking.clone()),
+                id: VarInt::new(HEIGHTMAP_WORLD_SURFACE),
+                data: LengthPrefixedVec::new(chunk.heightmaps.world_surface.clone()),
             },
         ];
 

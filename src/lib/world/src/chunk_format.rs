@@ -1,4 +1,5 @@
-use crate::block_id::{BlockId, BLOCK2ID};
+use crate::biome_id::get_biome_id;
+use crate::block_id::{BLOCK2ID, BlockId};
 use crate::vanilla_chunk_format;
 use crate::vanilla_chunk_format::VanillaChunk;
 use crate::{errors::WorldError, vanilla_chunk_format::VanillaHeightmaps};
@@ -84,6 +85,19 @@ fn convert_to_net_palette(vanilla_palettes: Vec<BlockData>) -> Result<Vec<VarInt
         } else {
             new_palette.push(VarInt::from(0));
             error!("Could not find block id for palette entry: {:?}", palette);
+        }
+    }
+    Ok(new_palette)
+}
+
+fn convert_biome_palette(vanilla_palettes: Vec<String>) -> Result<Vec<VarInt>, WorldError> {
+    let mut new_palette = Vec::new();
+    for palette in vanilla_palettes {
+        if let Some(id) = get_biome_id(&palette) {
+            new_palette.push(VarInt::from(id));
+        } else {
+            new_palette.push(VarInt::from(0));
+            error!("Could not find biome id for palette entry: {}", palette);
         }
     }
     Ok(new_palette)
@@ -201,11 +215,34 @@ impl VanillaChunk {
                 .iter()
                 .map(|&x| x as u8)
                 .collect();
+
+            let raw_biome_data = section
+                .biomes
+                .as_ref()
+                .and_then(|b| b.data.clone())
+                .unwrap_or_default();
+            let biome_palette = section
+                .biomes
+                .as_ref()
+                .map(|b| b.palette.clone())
+                .unwrap_or_default();
+            let bits_per_biome = if biome_palette.len() <= 1 {
+                0
+            } else {
+                (biome_palette.len() as f32).log2().ceil() as u8
+            };
+            let biome_data = if bits_per_biome == 0 {
+                vec![]
+            } else if !raw_biome_data.is_empty() {
+                raw_biome_data
+            } else {
+                let longs = ((64 * bits_per_biome as usize) + 63) / 64;
+                vec![0; longs]
+            };
             let biome_states = BiomeStates {
-                // TODO: Implement biome states properly
-                bits_per_biome: 4,
-                data: vec![],
-                palette: vec![VarInt::from(0); 1],
+                bits_per_biome,
+                data: biome_data,
+                palette: convert_biome_palette(biome_palette)?,
             };
             let section = Section {
                 y,

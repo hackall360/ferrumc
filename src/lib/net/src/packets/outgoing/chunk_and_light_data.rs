@@ -1,6 +1,6 @@
 use crate::errors::NetError;
 use byteorder::{BigEndian, WriteBytesExt};
-use ferrumc_macros::{packet, NetEncode};
+use ferrumc_macros::{NetEncode, packet};
 use ferrumc_net_codec::net_types::bitset::BitSet;
 use ferrumc_net_codec::net_types::byte_array::ByteArray;
 use ferrumc_net_codec::net_types::length_prefixed_vec::LengthPrefixedVec;
@@ -127,10 +127,22 @@ impl ChunkAndLightData {
                 }
             }
 
-            // Empty biome data for now
-            raw_data.write_u8(0)?;
-            // Forest biome id
-            raw_data.write_u8(21)?;
+            raw_data.write_u8(section.biome_states.bits_per_biome)?;
+            if section.biome_states.bits_per_biome == 0 {
+                if let Some(biome) = section.biome_states.palette.first() {
+                    biome.write(&mut raw_data)?;
+                } else {
+                    VarInt::new(0).write(&mut raw_data)?;
+                }
+            } else {
+                VarInt::new(section.biome_states.palette.len() as i32).write(&mut raw_data)?;
+                for biome in &section.biome_states.palette {
+                    biome.write(&mut raw_data)?;
+                }
+                for data_entry in &section.biome_states.data {
+                    raw_data.write_i64::<BigEndian>(*data_entry)?;
+                }
+            }
         }
         let mut sky_light_mask = BitSet::new(SECTIONS + 2);
         let mut block_light_mask = BitSet::new(SECTIONS + 2);

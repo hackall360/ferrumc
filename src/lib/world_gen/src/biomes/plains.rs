@@ -9,7 +9,7 @@ pub(crate) struct PlainsBiome;
 
 impl BiomeGenerator for PlainsBiome {
     fn _biome_id(&self) -> u8 {
-        0
+        39
     }
 
     fn _biome_name(&self) -> String {
@@ -23,6 +23,7 @@ impl BiomeGenerator for PlainsBiome {
         noise: &NoiseGenerator,
     ) -> Result<Chunk, WorldGenError> {
         let mut chunk = Chunk::new(x, z, "overworld".to_string());
+        chunk.set_biome(self._biome_id() as i32);
         let mut heights = vec![];
         let stone = BlockData {
             name: "minecraft:stone".to_string(),

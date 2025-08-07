@@ -121,6 +121,7 @@ pub fn compress_packet(
 #[cfg(test)]
 mod tests {
     use crate::compression::compress_packet;
+    use crate::connection::EncryptedReader;
     use crate::packets::incoming::packet_skeleton::PacketSkeleton;
     use crate::ConnState;
     use ferrumc_config::server_config::set_global_config;
@@ -211,7 +212,7 @@ mod tests {
         )
         .unwrap();
 
-        let mut async_reader = Cursor::new(compressed);
+        let mut async_reader = EncryptedReader::new(Cursor::new(compressed));
 
         let skel = PacketSkeleton::new(&mut async_reader, true, ConnState::Play).await;
         assert!(
@@ -267,7 +268,7 @@ mod tests {
         });
         let compressed = compress_packet(&packet, true, &NetEncodeOpts::WithLength).unwrap();
 
-        let mut async_reader = Cursor::new(compressed);
+        let mut async_reader = EncryptedReader::new(Cursor::new(compressed));
 
         let skel = PacketSkeleton::new(&mut async_reader, true, ConnState::Play).await;
         assert!(
@@ -312,7 +313,7 @@ mod tests {
         };
         let compressed = compress_packet(&packet, false, &NetEncodeOpts::WithLength).unwrap();
 
-        let mut async_reader = Cursor::new(compressed);
+        let mut async_reader = EncryptedReader::new(Cursor::new(compressed));
 
         let skel = PacketSkeleton::new(&mut async_reader, true, ConnState::Play).await;
         assert!(
@@ -330,7 +331,7 @@ mod tests {
     async fn test_decompress_bad_data() {
         // Test with invalid data that doesn't match expected format
         let bad_data = vec![0x00, 0x01, 0x02, 0x03]; // Not a valid VarInt or packet structure
-        let mut async_reader = Cursor::new(bad_data);
+        let mut async_reader = EncryptedReader::new(Cursor::new(bad_data));
 
         let skel = PacketSkeleton::new(&mut async_reader, true, ConnState::Play).await;
         assert!(
@@ -344,7 +345,7 @@ mod tests {
     async fn test_decompress_empty_data() {
         // Test with empty data, which should fail to read a packet skeleton
         let empty_data = vec![];
-        let mut async_reader = Cursor::new(empty_data);
+        let mut async_reader = EncryptedReader::new(Cursor::new(empty_data));
         let skel = PacketSkeleton::new(&mut async_reader, true, ConnState::Play).await;
         assert!(
             skel.is_err(),

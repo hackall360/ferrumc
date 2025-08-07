@@ -7,17 +7,22 @@ use crate::errors::PacketError::InvalidPacket;
 use crate::packets::incoming::packet_skeleton::PacketSkeleton;
 use crate::ConnState::Play;
 use crate::{handle_packet, PacketSender};
+use aes::Aes128;
 use bevy_ecs::prelude::{Component, Entity};
+use cfb8::cipher::{AsyncStreamCipher, KeyIvInit};
+use cfb8::Decryptor as Cfb8Decryptor;
 use crossbeam_channel::Sender;
 use ferrumc_core::identity::player_identity::PlayerIdentity;
 use ferrumc_net_codec::encode::NetEncode;
 use ferrumc_net_codec::encode::NetEncodeOpts;
 use ferrumc_net_encryption::Aes128Cfb8Encryptor;
 use ferrumc_state::ServerState;
+use std::pin::Pin;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
+use std::task::{Context, Poll};
 use std::time::Duration;
-use tokio::io::AsyncWriteExt;
+use tokio::io::{AsyncRead, AsyncWriteExt, ReadBuf};
 use tokio::net::tcp::OwnedWriteHalf;
 use tokio::net::TcpStream;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
@@ -29,6 +34,62 @@ use typename::TypeName;
 /// The maximum time allowed for a client to complete its initial handshake.
 /// Connections exceeding this duration will be dropped to avoid resource hogging.
 const MAX_HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// Reader wrapper that optionally decrypts inbound traffic using AES-128 CFB8.
+pub struct EncryptedReader<R> {
+    inner: R,
+    key: Option<[u8; 16]>,
+    iv: [u8; 16],
+}
+
+impl<R> EncryptedReader<R> {
+    /// Create a new reader with no encryption enabled.
+    pub fn new(inner: R) -> Self {
+        Self {
+            inner,
+            key: None,
+            iv: [0u8; 16],
+        }
+    }
+
+    /// Enable AES decryption using the provided shared secret.
+    pub fn enable_encryption(&mut self, shared_secret: &[u8; 16]) -> Result<(), NetError> {
+        self.key = Some(*shared_secret);
+        self.iv = *shared_secret;
+        Ok(())
+    }
+}
+
+impl<R: AsyncRead + Unpin> AsyncRead for EncryptedReader<R> {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<Result<(), std::io::Error>> {
+        let mut temp = vec![0u8; buf.remaining()];
+        let mut tmp_buf = ReadBuf::new(&mut temp);
+        match Pin::new(&mut self.inner).poll_read(cx, &mut tmp_buf) {
+            Poll::Ready(Ok(())) => {
+                let filled = tmp_buf.filled().len();
+                if let Some(key) = self.key {
+                    for b in &mut temp[..filled] {
+                        let mut block = [*b];
+                        let cipher = Cfb8Decryptor::<Aes128>::new_from_slices(&key, &self.iv)
+                            .map_err(|e| std::io::Error::other(e.to_string()))?;
+                        cipher.decrypt(&mut block);
+                        self.iv.rotate_left(1);
+                        self.iv[15] = *b;
+                        *b = block[0];
+                    }
+                }
+                buf.put_slice(&temp[..filled]);
+                Poll::Ready(Ok(()))
+            }
+            Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
+            Poll::Pending => Poll::Pending,
+        }
+    }
+}
 
 /// StreamWriter manages asynchronous writes to a client's TCP connection.
 ///
@@ -152,12 +213,8 @@ impl StreamWriter {
         Ok(())
     }
 
-    pub fn enable_encryption(&self, shared_secret: &[u8]) -> Result<(), NetError> {
-        let mut key = [0u8; 16];
-        let mut iv = [0u8; 16];
-        key.copy_from_slice(&shared_secret[..16]);
-        iv.copy_from_slice(&shared_secret[..16]);
-        let encryptor = Aes128Cfb8Encryptor::new(key, iv);
+    pub fn enable_encryption(&self, shared_secret: &[u8; 16]) -> Result<(), NetError> {
+        let encryptor = Aes128Cfb8Encryptor::new(*shared_secret, *shared_secret);
         *self.encryptor.lock().unwrap() = Some(encryptor);
         Ok(())
     }
@@ -193,7 +250,8 @@ pub async fn handle_connection(
     packet_sender: Arc<PacketSender>,
     new_join_sender: Arc<Sender<NewConnection>>,
 ) -> Result<(), NetError> {
-    let (mut tcp_reader, tcp_writer) = tcp_stream.into_split();
+    let (tcp_reader_raw, tcp_writer) = tcp_stream.into_split();
+    let mut tcp_reader = EncryptedReader::new(tcp_reader_raw);
 
     let running = Arc::new(AtomicBool::new(true));
 

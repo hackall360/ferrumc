@@ -1,6 +1,7 @@
 use crate::errors::CompressionError::{
     ChecksumMismatch, CompressedPacketTooSmall, GenericDecompressionError, MissingChecksum,
 };
+use crate::connection::EncryptedReader;
 use crate::errors::{NetError, PacketError};
 use crate::ConnState;
 use ferrumc_config::server_config::get_global_config;
@@ -56,7 +57,7 @@ impl PacketSkeleton {
     /// - Returns `MalformedPacket` if framing data is invalid.
     /// - Returns `DecompressionError` if compressed payload integrity checks fail.
     pub async fn new<R: AsyncRead + Unpin>(
-        reader: &mut R,
+        reader: &mut EncryptedReader<R>,
         compressed: bool,
         state: ConnState,
     ) -> Result<Self, NetError> {
@@ -94,7 +95,7 @@ impl PacketSkeleton {
     /// - Filters out `custom_payload` plugin messages (0x14) in the Play state
     ///   to ignore unused plugin channels.
     async fn read_uncompressed<R: AsyncRead + Unpin>(
-        reader: &mut R,
+        reader: &mut EncryptedReader<R>,
         state: ConnState,
     ) -> Result<Self, NetError> {
         loop {
@@ -154,7 +155,7 @@ impl PacketSkeleton {
     ///
     /// - Plugin messages (0x14) are ignored here as well.
     async fn read_compressed<R: AsyncRead + Unpin>(
-        reader: &mut R,
+        reader: &mut EncryptedReader<R>,
         state: ConnState,
     ) -> Result<Self, NetError> {
         loop {

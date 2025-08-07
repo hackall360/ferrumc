@@ -1,5 +1,5 @@
 use crate::conn_init::{LoginResult, MINECRAFT_VERSION, PROTOCOL_VERSION_1_20_1};
-use crate::connection::StreamWriter;
+use crate::connection::{EncryptedReader, StreamWriter};
 use crate::errors::{NetError, PacketError};
 use crate::packets::incoming::packet_skeleton::PacketSkeleton;
 use crate::packets::incoming::ping::PingPacket;
@@ -12,7 +12,7 @@ use ferrumc_macros::lookup_packet;
 use ferrumc_net_codec::decode::{NetDecode, NetDecodeOpts};
 use ferrumc_state::GlobalState;
 use rand::prelude::IndexedRandom;
-use tokio::net::tcp::OwnedReadHalf;
+use tokio::io::AsyncRead;
 
 /// Handles the Minecraft server "status" state of the handshake.
 ///
@@ -33,15 +33,15 @@ use tokio::net::tcp::OwnedReadHalf;
 /// A tuple `(true, LoginResult)`:
 /// - `true`: Indicates that the connection should be closed after responding.
 /// - `LoginResult`: Contains no player identity or compression because this is a stateless query.
-pub(super) async fn status(
-    mut conn_read: &mut OwnedReadHalf,
+pub(super) async fn status<R: AsyncRead + Unpin>(
+    conn_read: &mut EncryptedReader<R>,
     conn_write: &StreamWriter,
     state: GlobalState,
 ) -> Result<(bool, LoginResult), NetError> {
     // ---- Phase 1: Receive and validate Status Request packet ----
 
     // Read next incoming packet in "status" connection state
-    let mut skel = PacketSkeleton::new(&mut conn_read, false, crate::ConnState::Status).await?;
+    let mut skel = PacketSkeleton::new(conn_read, false, crate::ConnState::Status).await?;
 
     // Expected packet ID for a status request
     let expected_id = lookup_packet!("status", "serverbound", "status_request");
@@ -69,7 +69,7 @@ pub(super) async fn status(
 
     // ---- Phase 3: Wait for Ping Request ----
 
-    let mut skel = PacketSkeleton::new(&mut conn_read, false, crate::ConnState::Status).await?;
+    let mut skel = PacketSkeleton::new(conn_read, false, crate::ConnState::Status).await?;
 
     let expected_id = lookup_packet!("status", "serverbound", "ping_request");
 

@@ -5,7 +5,9 @@ use crate::conn_init::{LoginResult, NetDecodeOpts};
 use crate::connection::{EncryptedReader, StreamWriter};
 use crate::errors::{NetError, PacketError};
 use crate::packets::incoming::packet_skeleton::PacketSkeleton;
+use crate::packets::incoming::known_packs::ServerboundKnownPacks;
 use crate::packets::outgoing::login_disconnect::LoginDisconnectPacket;
+use crate::packets::outgoing::known_packs::{ClientboundKnownPacks, KnownPack as ClientKnownPack};
 use crate::ConnState::*;
 use ferrumc_config::server_config::get_global_config;
 use ferrumc_core::identity::player_identity::PlayerIdentity;
@@ -26,8 +28,9 @@ use uuid::Uuid;
 /// This function follows the Minecraft 1.20.1 login handshake:
 /// 1. Reads the initial login packet and authenticates the username/UUID.
 /// 2. Optionally enables network compression.
-/// 3. Sends login success and transitions directly into the Play state.
-/// 4. Spawns the player in the world (initial chunks, teleport confirmation).
+/// 3. Performs known-pack negotiation.
+/// 4. Sends login success and transitions directly into the Play state.
+/// 5. Spawns the player in the world (initial chunks, teleport confirmation).
 ///
 /// # Returns
 /// `(false, LoginResult)` on success, where:
@@ -146,7 +149,54 @@ pub(super) async fn login<R: AsyncRead + Unpin>(
     }
 
     // =============================================================================================
-    // 4 Send Login Success (UUID and username acknowledgement)
+    // 4 Send known packs and await acknowledgment
+    let server_known_packs: Vec<(&str, &str, &str)> = Vec::new();
+    let known_packs_packet = ClientboundKnownPacks {
+        packs: LengthPrefixedVec::new(
+            server_known_packs
+                .iter()
+                .map(|(ns, id, ver)| ClientKnownPack {
+                    namespace: *ns,
+                    id: *id,
+                    version: *ver,
+                })
+                .collect(),
+        ),
+    };
+    conn_write.send_packet(known_packs_packet)?;
+
+    let mut skel = PacketSkeleton::new(conn_read, compressed, Login).await?;
+    let expected_id = lookup_packet!("login", "serverbound", "known_packs");
+    if skel.id != expected_id {
+        return Err(NetError::Packet(PacketError::UnexpectedPacket {
+            expected: expected_id,
+            received: skel.id,
+            state: Login,
+        }));
+    }
+
+    let client_known = ServerboundKnownPacks::decode(&mut skel.data, &NetDecodeOpts::None)?;
+    if client_known.packs.length.0 as usize != server_known_packs.len()
+        || !client_known
+            .packs
+            .data
+            .iter()
+            .zip(server_known_packs.iter())
+            .all(|(c, s)| c.namespace == s.0 && c.id == s.1 && c.version == s.2)
+    {
+        let disconnect = LoginDisconnectPacket::new("Incompatible known packs");
+        conn_write.send_packet(disconnect)?;
+        return Ok((
+            true,
+            LoginResult {
+                player_identity: None,
+                compression: compressed,
+            },
+        ));
+    }
+
+    // =============================================================================================
+    // 5 Send Login Success (UUID and username acknowledgement)
     let login_success = crate::packets::outgoing::login_success::LoginSuccessPacket {
         uuid: player_uuid,
         username: &login_start.username,
@@ -163,13 +213,13 @@ pub(super) async fn login<R: AsyncRead + Unpin>(
     };
 
     // =============================================================================================
-    // 4 Send login_play packet to switch to Play state
+    // 6 Send login_play packet to switch to Play state
     let login_play =
         crate::packets::outgoing::login_play::LoginPlayPacket::new(player_identity.short_uuid);
     conn_write.send_packet(login_play)?;
 
     // =============================================================================================
-    // 5 Send initial player position sync (requires teleport confirmation)
+    // 7 Send initial player position sync (requires teleport confirmation)
     let teleport_id_i32: i32 = (rand::random::<u32>() & 0x3FFF_FFFF) as i32;
     let sync_player_pos =
         crate::packets::outgoing::synchronize_player_position::SynchronizePlayerPositionPacket {
@@ -179,7 +229,7 @@ pub(super) async fn login<R: AsyncRead + Unpin>(
     conn_write.send_packet(sync_player_pos)?;
 
     // =============================================================================================
-    // 6 Await client's teleport acceptance
+    // 8 Await client's teleport acceptance
     let mut skel = PacketSkeleton::new(conn_read, compressed, Play).await?;
     let expected_id = lookup_packet!("play", "serverbound", "accept_teleportation");
     if skel.id != expected_id {
@@ -204,7 +254,7 @@ pub(super) async fn login<R: AsyncRead + Unpin>(
     }
 
     // =============================================================================================
-    // 7 Receive first movement packet from player
+    // 9 Receive first movement packet from player
     let mut skel = PacketSkeleton::new(conn_read, compressed, Play).await?;
     let expected_id = lookup_packet!("play", "serverbound", "move_player_pos_rot");
     if skel.id != expected_id {
@@ -222,17 +272,17 @@ pub(super) async fn login<R: AsyncRead + Unpin>(
         )?;
 
     // =============================================================================================
-    // 8 Send initial game event (e.g., "change game mode")
+    // 10 Send initial game event (e.g., "change game mode")
     let game_event = crate::packets::outgoing::game_event::GameEventPacket::new(13, 0.0);
     conn_write.send_packet(game_event)?;
 
     // =============================================================================================
-    // 9 Send center chunk packet (player spawn location)
+    // 11 Send center chunk packet (player spawn location)
     let center_chunk = crate::packets::outgoing::set_center_chunk::SetCenterChunk::new(0, 0);
     conn_write.send_packet(center_chunk)?;
 
     // =============================================================================================
-    // 10 Load and send surrounding chunks within render distance
+    // 12 Load and send surrounding chunks within render distance
     let radius = get_global_config().chunk_render_distance as i32;
 
     let mut batch = state.thread_pool.batch();

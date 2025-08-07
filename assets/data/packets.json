@@ -30,6 +30,9 @@
       },
       "minecraft:custom_query": {
         "protocol_id": 4
+      },
+      "minecraft:known_packs": {
+        "protocol_id": 5
       }
     },
     "serverbound": {
@@ -41,6 +44,9 @@
       },
       "minecraft:custom_query_answer": {
         "protocol_id": 2
+      },
+      "minecraft:known_packs": {
+        "protocol_id": 3
       }
     }
   },

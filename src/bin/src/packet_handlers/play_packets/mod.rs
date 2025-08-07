@@ -1,4 +1,5 @@
 use bevy_ecs::schedule::Schedule;
+use crate::systems::chat_message;
 
 mod chunk_batch_ack;
 mod confirm_player_teleport;
@@ -21,6 +22,7 @@ pub fn register_packet_handlers(schedule: &mut Schedule) {
     schedule.add_systems(place_block::handle);
     schedule.add_systems(player_action::handle);
     schedule.add_systems(player_command::handle);
+    schedule.add_systems(chat_message::broadcast_chat_messages);
     schedule.add_systems(set_player_position::handle);
     schedule.add_systems(set_player_position_and_rotation::handle);
     schedule.add_systems(set_player_rotation::handle);

@@ -7,6 +7,7 @@ pub mod known_packs;
 
 pub mod keep_alive;
 pub mod packet_skeleton;
+pub mod chat_message;
 
 pub mod place_block;
 pub mod player_command;

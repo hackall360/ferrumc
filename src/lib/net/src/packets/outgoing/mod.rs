@@ -3,6 +3,7 @@ pub mod chunk_batch_finish;
 pub mod chunk_batch_start;
 pub mod disconnect;
 pub mod game_event;
+pub mod chat_message;
 pub mod keep_alive;
 pub mod login_disconnect;
 pub mod login_play;

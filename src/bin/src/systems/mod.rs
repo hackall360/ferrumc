@@ -1,4 +1,5 @@
 pub mod connection_killer;
+pub mod chat_message;
 mod cross_chunk_boundary;
 mod keep_alive_system;
 pub mod new_connections;

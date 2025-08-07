@@ -2,7 +2,7 @@
 use crate::packets::outgoing::entity_metadata::entity_state::{EntityState, EntityStateMask};
 use crate::packets::outgoing::entity_metadata::index_type::EntityMetadataIndexType;
 use crate::packets::outgoing::entity_metadata::value::EntityMetadataValue;
-use ferrumc_macros::{packet, NetEncode};
+use ferrumc_macros::{NetEncode, packet};
 use ferrumc_net_codec::encode::{NetEncode, NetEncodeOpts};
 use ferrumc_net_codec::net_types::var_int::VarInt;
 use std::io::Write;
@@ -229,9 +229,8 @@ mod extra_data_types {
     use ferrumc_net_codec::encode::{NetEncode, NetEncodeOpts};
     use ferrumc_net_codec::net_types::var_int::VarInt;
     use std::io::Write;
-    // STANDING = 0, FALL_FLYING = 1, SLEEPING = 2, SWIMMING = 3, SPIN_ATTACK = 4, SNEAKING = 5, LONG_JUMPING = 6, DYING = 7, CROAKING = 8,
-    // USING_TONGUE = 9, SITTING = 10, ROARING = 11, SNIFFING = 12, EMERGING = 13, DIGGING = 14
-    // Poses introduced after 1.20.1 (SLIDING = 15, SHOOTING = 16, INHALING = 17) are omitted
+    // STANDING = 0, FALL_FLYING = 1, SLEEPING = 2, SWIMMING = 3, SPIN_ATTACK = 4, SNEAKING = 5,
+    // LONG_JUMPING = 6, DYING = 7
 
     /// Possible poses/animations an entity can have
     #[derive(Debug, Clone)]
@@ -245,13 +244,6 @@ mod extra_data_types {
         Sneaking,
         LongJumping,
         Dying,
-        Croaking,
-        UsingTongue,
-        Sitting,
-        Roaring,
-        Sniffing,
-        Emerging,
-        Digging,
     }
 
     impl EntityPose {
@@ -266,13 +258,6 @@ mod extra_data_types {
                 Sneaking => 5,
                 LongJumping => 6,
                 Dying => 7,
-                Croaking => 8,
-                UsingTongue => 9,
-                Sitting => 10,
-                Roaring => 11,
-                Sniffing => 12,
-                Emerging => 13,
-                Digging => 14,
             };
             VarInt::new(val)
         }

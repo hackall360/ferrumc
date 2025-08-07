@@ -1,4 +1,5 @@
-use bevy_ecs::prelude::{Entity, Query, Res};
+use bevy_ecs::prelude::{Commands, Entity, Query, Res};
+use ferrumc_core::transform::pending_teleport::PendingTeleport;
 use ferrumc_core::transform::position::Position;
 use ferrumc_net::connection::StreamWriter;
 use ferrumc_net::packets::outgoing::synchronize_player_position::SynchronizePlayerPositionPacket;
@@ -10,6 +11,7 @@ use tracing::warn;
 pub fn handle(
     ev: Res<PlayerLoadedReceiver>,
     state: Res<GlobalStateResource>,
+    mut commands: Commands,
     query: Query<(Entity, &Position, &StreamWriter)>,
 ) {
     for (_, player) in ev.0.try_iter() {
@@ -61,6 +63,10 @@ pub fn handle(
                         "Sent synchronize player position packet for player {}",
                         player
                     );
+                    let teleport_pos = Position::new(packet.x, packet.y, packet.z);
+                    commands
+                        .entity(entity)
+                        .insert(PendingTeleport::new(packet.teleport_id.0, teleport_pos));
                 }
             }
         } else {

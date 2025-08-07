@@ -1,3 +1,4 @@
+pub mod biome_id;
 pub mod block_id;
 pub mod chunk_format;
 mod db_functions;

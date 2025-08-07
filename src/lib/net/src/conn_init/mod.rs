@@ -26,8 +26,12 @@ pub(crate) struct LoginResult {
     pub compression: bool,
 }
 
-/// Protocol version supported by this server implementation (Minecraft 1.20.1).
-/// Used for rejecting clients with mismatched versions during handshake.
+/// Minecraft version targeted by this server implementation.
+pub const MINECRAFT_VERSION: &str = "1.20.1";
+
+/// Protocol version supported by this server implementation (Minecraft
+/// `MINECRAFT_VERSION`). Used for rejecting clients with mismatched versions
+/// during handshake.
 pub const PROTOCOL_VERSION_1_20_1: i32 = 763;
 
 /// Handles the initial handshake sequence from a connecting client.
@@ -87,7 +91,8 @@ pub async fn handle_handshake(
     if hs_packet.protocol_version.0 != PROTOCOL_VERSION_1_20_1 {
         trace!(
             "Protocol version mismatch: {} != {}",
-            hs_packet.protocol_version.0, PROTOCOL_VERSION_1_20_1
+            hs_packet.protocol_version.0,
+            PROTOCOL_VERSION_1_20_1
         );
         return handle_version_mismatch(hs_packet, conn_read, conn_write, state).await;
     }
@@ -133,7 +138,8 @@ async fn handle_version_mismatch(
         1 => {
             trace!(
                 "Protocol version mismatch during status request: {} != {}",
-                hs_packet.protocol_version.0, PROTOCOL_VERSION_1_20_1
+                hs_packet.protocol_version.0,
+                PROTOCOL_VERSION_1_20_1
             );
             status(conn_read, conn_write, state).await
         }
@@ -152,7 +158,8 @@ async fn handle_version_mismatch(
 
             trace!(
                 "Sent login disconnect due to protocol version mismatch: {} != {}",
-                hs_packet.protocol_version.0, PROTOCOL_VERSION_1_20_1
+                hs_packet.protocol_version.0,
+                PROTOCOL_VERSION_1_20_1
             );
 
             Err(NetError::MismatchedProtocolVersion(
@@ -173,7 +180,7 @@ async fn handle_version_mismatch(
 /// # Format
 /// ```text
 /// Your client is outdated!
-/// Please use Minecraft version 1.20.1 to connect to this server.
+/// Please use Minecraft version `MINECRAFT_VERSION` to connect to this server.
 /// Server Version: 763 | Your Version: <client_version>
 /// ```
 ///
@@ -190,7 +197,7 @@ fn get_mismatched_version_message(client_version: i32) -> TextComponent {
         .extra(ComponentBuilder::text("\n\n"))
         .extra(ComponentBuilder::text("Please use Minecraft version ").color(NamedColor::Gray))
         .extra(
-            ComponentBuilder::text("1.20.1")
+            ComponentBuilder::text(MINECRAFT_VERSION)
                 .color(NamedColor::Green)
                 .bold(),
         )

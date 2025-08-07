@@ -136,6 +136,7 @@ fnv = "1.0.7"
 wyhash = "0.6.0"
 ahash = "0.8.12"
 rsa = "0.9"
+sha1 = "0.10.6"
 
 # Encoding/Serialization
 serde = { version = "1.0.219", features = ["derive"] }

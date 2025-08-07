@@ -35,6 +35,8 @@ indexmap = { workspace = true }
 lazy_static = { workspace = true }
 yazi = { workspace = true }
 rsa = { workspace = true }
+reqwest = { workspace = true }
+sha1 = { workspace = true }
 aes = "0.8"
 cfb8 = "0.8"
 

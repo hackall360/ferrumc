@@ -1,9 +1,11 @@
+use crate::auth::verify_session;
 use crate::compression::compress_packet;
 use crate::conn_init::VarInt;
 use crate::conn_init::{LoginResult, NetDecodeOpts};
 use crate::connection::{EncryptedReader, StreamWriter};
 use crate::errors::{NetError, PacketError};
 use crate::packets::incoming::packet_skeleton::PacketSkeleton;
+use crate::packets::outgoing::login_disconnect::LoginDisconnectPacket;
 use crate::ConnState::*;
 use ferrumc_config::server_config::get_global_config;
 use ferrumc_core::identity::player_identity::PlayerIdentity;
@@ -60,6 +62,8 @@ pub(super) async fn login<R: AsyncRead + Unpin>(
         &NetDecodeOpts::None,
     )?;
 
+    let mut player_uuid = login_start.uuid;
+
     // =============================================================================================
     // 2 Handle online-mode encryption negotiation
     if get_global_config().online_mode {
@@ -68,11 +72,11 @@ pub(super) async fn login<R: AsyncRead + Unpin>(
 
         let (private_key, public_key) = generate_rsa_keypair()?;
         let verify_token = generate_verify_token();
-        let public_key_der = public_key
-            .to_pkcs1_der()
-            .map_err(|e| NetError::EncryptionError(
+        let public_key_der = public_key.to_pkcs1_der().map_err(|e| {
+            NetError::EncryptionError(
                 ferrumc_net_encryption::errors::NetEncryptionError::RsaError(e.to_string()),
-            ))?;
+            )
+        })?;
 
         let request = LoginEncryptionRequest {
             server_id: "",
@@ -102,6 +106,30 @@ pub(super) async fn login<R: AsyncRead + Unpin>(
 
         conn_write.enable_encryption(&shared_secret)?;
         conn_read.enable_encryption(&shared_secret)?;
+
+        match verify_session(
+            &login_start.username,
+            &shared_secret,
+            public_key_der.as_bytes(),
+        )
+        .await
+        {
+            Ok(uuid) => {
+                player_uuid = uuid.as_u128();
+            }
+            Err(err) => {
+                error!("Session verification failed: {:?}", err);
+                let disconnect = LoginDisconnectPacket::new("Failed to verify session");
+                conn_write.send_packet(disconnect)?;
+                return Ok((
+                    true,
+                    LoginResult {
+                        player_identity: None,
+                        compression: false,
+                    },
+                ));
+            }
+        }
     }
 
     // =============================================================================================
@@ -121,7 +149,7 @@ pub(super) async fn login<R: AsyncRead + Unpin>(
     // =============================================================================================
     // 4 Send Login Success (UUID and username acknowledgement)
     let login_success = crate::packets::outgoing::login_success::LoginSuccessPacket {
-        uuid: login_start.uuid,
+        uuid: player_uuid,
         username: &login_start.username,
         properties: LengthPrefixedVec::default(),
     };
@@ -130,9 +158,9 @@ pub(super) async fn login<R: AsyncRead + Unpin>(
 
     // Build PlayerIdentity for server-side tracking
     let player_identity = PlayerIdentity {
-        uuid: Uuid::from_u128(login_start.uuid),
+        uuid: Uuid::from_u128(player_uuid),
         username: login_start.username.clone(),
-        short_uuid: login_start.uuid as i32,
+        short_uuid: player_uuid as i32,
     };
 
     // =============================================================================================

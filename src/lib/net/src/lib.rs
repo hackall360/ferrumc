@@ -1,6 +1,7 @@
 use ferrumc_macros::setup_packet_handling;
 use std::fmt::Display;
 
+pub mod auth;
 pub mod compression;
 mod conn_init;
 pub mod connection;

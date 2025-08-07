@@ -12,9 +12,10 @@ use crossbeam_channel::Sender;
 use ferrumc_core::identity::player_identity::PlayerIdentity;
 use ferrumc_net_codec::encode::NetEncode;
 use ferrumc_net_codec::encode::NetEncodeOpts;
+use ferrumc_net_encryption::Aes128Cfb8Encryptor;
 use ferrumc_state::ServerState;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::io::AsyncWriteExt;
 use tokio::net::tcp::OwnedWriteHalf;
@@ -41,6 +42,7 @@ pub struct StreamWriter {
     sender: UnboundedSender<Vec<u8>>,
     pub running: Arc<AtomicBool>,
     pub compress: Arc<AtomicBool>,
+    encryptor: Arc<Mutex<Option<Aes128Cfb8Encryptor>>>,
 }
 
 impl Drop for StreamWriter {
@@ -57,6 +59,7 @@ impl StreamWriter {
     /// and writes bytes to the network socket.
     pub async fn new(mut writer: OwnedWriteHalf, running: Arc<AtomicBool>) -> Self {
         let compress = Arc::new(AtomicBool::new(false)); // Default: no compression
+        let encryptor = Arc::new(Mutex::new(None));
         let (sender, mut receiver): (UnboundedSender<Vec<u8>>, UnboundedReceiver<Vec<u8>>) =
             tokio::sync::mpsc::unbounded_channel();
         let running_clone = running.clone();
@@ -80,6 +83,7 @@ impl StreamWriter {
             sender,
             running,
             compress,
+            encryptor,
         }
     }
 
@@ -120,6 +124,12 @@ impl StreamWriter {
             )))
         })?;
 
+        let raw_bytes = if let Some(enc) = self.encryptor.lock().unwrap().as_ref() {
+            enc.encrypt(&raw_bytes)?
+        } else {
+            raw_bytes
+        };
+
         self.sender.send(raw_bytes).map_err(std::io::Error::other)?;
         Ok(())
     }
@@ -132,7 +142,23 @@ impl StreamWriter {
             return Err(NetError::ConnectionDropped);
         }
 
+        let raw_bytes = if let Some(enc) = self.encryptor.lock().unwrap().as_ref() {
+            enc.encrypt(&raw_bytes)?
+        } else {
+            raw_bytes
+        };
+
         self.sender.send(raw_bytes).map_err(std::io::Error::other)?;
+        Ok(())
+    }
+
+    pub fn enable_encryption(&self, shared_secret: &[u8]) -> Result<(), NetError> {
+        let mut key = [0u8; 16];
+        let mut iv = [0u8; 16];
+        key.copy_from_slice(&shared_secret[..16]);
+        iv.copy_from_slice(&shared_secret[..16]);
+        let encryptor = Aes128Cfb8Encryptor::new(key, iv);
+        *self.encryptor.lock().unwrap() = Some(encryptor);
         Ok(())
     }
 }

@@ -10,8 +10,11 @@ use ferrumc_core::identity::player_identity::PlayerIdentity;
 use ferrumc_macros::lookup_packet;
 use ferrumc_net_codec::decode::NetDecode;
 use ferrumc_net_codec::encode::NetEncodeOpts;
+use ferrumc_net_codec::net_types::byte_array::ByteArray;
 use ferrumc_net_codec::net_types::length_prefixed_vec::LengthPrefixedVec;
+use ferrumc_net_encryption::{decrypt_shared_secret, generate_rsa_keypair, generate_verify_token};
 use ferrumc_state::GlobalState;
+use rsa::pkcs1::EncodeRsaPublicKey;
 use tokio::net::tcp::OwnedReadHalf;
 use tracing::error;
 use uuid::Uuid;
@@ -58,11 +61,50 @@ pub(super) async fn login(
     )?;
 
     // =============================================================================================
-    // 2 Negotiate compression if configured
+    // 2 Handle online-mode encryption negotiation
+    if get_global_config().online_mode {
+        use crate::packets::incoming::login_encryption_response::LoginEncryptionResponse;
+        use crate::packets::outgoing::login_encryption_request::LoginEncryptionRequest;
+
+        let (private_key, public_key) = generate_rsa_keypair()?;
+        let verify_token = generate_verify_token();
+        let public_key_der = public_key
+            .to_pkcs1_der()
+            .map_err(|e| NetError::EncryptionError(
+                ferrumc_net_encryption::errors::NetEncryptionError::RsaError(e.to_string()),
+            ))?;
+
+        let request = LoginEncryptionRequest {
+            server_id: "",
+            public_key: ByteArray::new(public_key_der.as_bytes().to_vec()),
+            verify_token: ByteArray::new(verify_token.to_vec()),
+        };
+        conn_write.send_packet(request)?;
+
+        let mut skel = PacketSkeleton::new(conn_read, compressed, Login).await?;
+        if skel.id != 0x01 {
+            return Err(NetError::Packet(PacketError::UnexpectedPacket {
+                expected: 0x01,
+                received: skel.id,
+                state: Login,
+            }));
+        }
+        let response = LoginEncryptionResponse::decode(&mut skel.data, &NetDecodeOpts::None)?;
+
+        let shared_secret = decrypt_shared_secret(&private_key, &response.shared_secret)?;
+        let token = decrypt_shared_secret(&private_key, &response.verify_token)?;
+        if token != verify_token {
+            return Err(NetError::Misc("Invalid verify token".to_string()));
+        }
+
+        conn_write.enable_encryption(&shared_secret)?;
+    }
+
+    // =============================================================================================
+    // 3 Negotiate compression if configured
     if get_global_config().network_compression_threshold > 0 {
         compressed = true;
 
-        // Notify client to enable compression on subsequent packets
         let compression_packet = crate::packets::outgoing::set_compression::SetCompressionPacket {
             threshold: VarInt::new(get_global_config().network_compression_threshold),
         };
@@ -73,7 +115,7 @@ pub(super) async fn login(
     }
 
     // =============================================================================================
-    // 3 Send Login Success (UUID and username acknowledgement)
+    // 4 Send Login Success (UUID and username acknowledgement)
     let login_success = crate::packets::outgoing::login_success::LoginSuccessPacket {
         uuid: login_start.uuid,
         username: &login_start.username,

@@ -12,6 +12,8 @@ tps = 20
 world = "world"
 # Whether the server should validate players via the whitelist
 whitelist = false
+# Whether the server should authenticate players via Mojang. Set to false for offline mode.
+online_mode = true
 # Network compression threshold (can be negative). This decides how long a packet has to be before it is compressed.
 # Very small packets may actually increase in size when compressed, so setting it to 0 won't be perfect in all situations.
 # Set to -1 to disable compression.

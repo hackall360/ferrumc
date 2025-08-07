@@ -35,9 +35,10 @@ pub fn set_global_config(config: ServerConfig) {
 /// - `world`: The name of the world that the server will load.
 /// - `network_compression_threshold`: The threshold at which the server will compress network packets.
 /// - `whitelist`: Whether the server whitelist is enabled or not.
+/// - `online_mode`: Whether the server should authenticate players or run in offline mode.
 /// - `chunk_render_distance`: The render distance of the chunks. This is the number of chunks that will be
 ///   loaded around the player.
-#[derive(Debug, Deserialize, Serialize, Default)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct ServerConfig {
     pub host: String,
     pub port: u16, // 0-65535
@@ -49,7 +50,32 @@ pub struct ServerConfig {
     pub network_compression_threshold: i32, // Can be negative
     pub verify_decompressed_packets: bool,
     pub whitelist: bool,
+    #[serde(default = "default_online_mode")]
+    pub online_mode: bool,
     pub chunk_render_distance: u32,
+}
+
+const fn default_online_mode() -> bool {
+    true
+}
+
+impl Default for ServerConfig {
+    fn default() -> Self {
+        Self {
+            host: Default::default(),
+            port: Default::default(),
+            motd: Default::default(),
+            max_players: Default::default(),
+            tps: Default::default(),
+            database: Default::default(),
+            world: Default::default(),
+            network_compression_threshold: Default::default(),
+            verify_decompressed_packets: Default::default(),
+            whitelist: Default::default(),
+            online_mode: default_online_mode(),
+            chunk_render_distance: Default::default(),
+        }
+    }
 }
 
 /// The database configuration section from [ServerConfig].

@@ -1,6 +1,6 @@
 use crate::errors::NetError;
 use byteorder::{BigEndian, WriteBytesExt};
-use ferrumc_macros::{NetEncode, packet};
+use ferrumc_macros::{packet, NetEncode};
 use ferrumc_net_codec::net_types::bitset::BitSet;
 use ferrumc_net_codec::net_types::byte_array::ByteArray;
 use ferrumc_net_codec::net_types::length_prefixed_vec::LengthPrefixedVec;
@@ -122,8 +122,14 @@ impl ChunkAndLightData {
                         raw_data.write_i64::<BigEndian>(*data_entry)?;
                     }
                 }
-                PaletteType::Direct { .. } => {
-                    todo!("Direct palette type")
+                PaletteType::Direct {
+                    bits_per_block,
+                    data,
+                } => {
+                    raw_data.write_u8(*bits_per_block)?;
+                    for data_entry in data {
+                        raw_data.write_i64::<BigEndian>(*data_entry)?;
+                    }
                 }
             }
 

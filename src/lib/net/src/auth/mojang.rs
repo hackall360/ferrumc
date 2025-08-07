@@ -2,6 +2,7 @@ use crate::errors::NetError;
 use reqwest::Client;
 use serde::Deserialize;
 use sha1::{Digest, Sha1};
+use std::env;
 use uuid::Uuid;
 
 fn compute_server_hash(shared_secret: &[u8], public_key: &[u8]) -> String {
@@ -42,8 +43,11 @@ pub async fn verify_session(
 ) -> Result<Uuid, NetError> {
     let server_hash = compute_server_hash(shared_secret, public_key);
     let client = Client::new();
+    let url = env::var("MOJANG_SESSION_URL").unwrap_or_else(|_| {
+        "https://sessionserver.mojang.com/session/minecraft/hasJoined".to_string()
+    });
     let resp = client
-        .get("https://sessionserver.mojang.com/session/minecraft/hasJoined")
+        .get(url)
         .query(&[("username", username), ("serverId", &server_hash)])
         .send()
         .await

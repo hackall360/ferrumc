@@ -3,6 +3,7 @@ pub mod login_start;
 pub mod login_encryption_response;
 pub mod ping;
 pub mod status_request;
+pub mod known_packs;
 
 pub mod keep_alive;
 pub mod packet_skeleton;

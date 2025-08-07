@@ -8,6 +8,7 @@ pub mod login_disconnect;
 pub mod login_play;
 pub mod login_encryption_request;
 pub mod login_success;
+pub mod known_packs;
 pub mod ping_response;
 pub mod set_center_chunk;
 pub mod set_default_spawn_position;

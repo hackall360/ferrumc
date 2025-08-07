@@ -78,6 +78,10 @@ impl PlayerWithActions {
         for action in &self.actions {
             mask |= match action {
                 PlayerAction::AddPlayer { .. } => 0x01,
+                PlayerAction::UpdateGameMode { .. } => 0x04,
+                PlayerAction::UpdateListed { .. } => 0x08,
+                PlayerAction::UpdateLatency { .. } => 0x10,
+                PlayerAction::UpdateDisplayName { .. } => 0x20,
             }
         }
         mask
@@ -92,6 +96,38 @@ impl PlayerWithActions {
             }],
         }
     }
+
+    pub fn update_game_mode(uuid: i32, game_mode: i32) -> Self {
+        Self {
+            uuid,
+            actions: vec![PlayerAction::UpdateGameMode {
+                game_mode: VarInt::new(game_mode),
+            }],
+        }
+    }
+
+    pub fn update_listed(uuid: i32, listed: bool) -> Self {
+        Self {
+            uuid,
+            actions: vec![PlayerAction::UpdateListed { listed }],
+        }
+    }
+
+    pub fn update_latency(uuid: i32, latency: i32) -> Self {
+        Self {
+            uuid,
+            actions: vec![PlayerAction::UpdateLatency {
+                latency: VarInt::new(latency),
+            }],
+        }
+    }
+
+    pub fn update_display_name(uuid: i32, display_name: Option<String>) -> Self {
+        Self {
+            uuid,
+            actions: vec![PlayerAction::UpdateDisplayName { display_name }],
+        }
+    }
 }
 
 #[derive(NetEncode, Debug)]
@@ -99,6 +135,18 @@ pub enum PlayerAction {
     AddPlayer {
         name: String,
         properties: LengthPrefixedVec<PlayerProperty>,
+    },
+    UpdateGameMode {
+        game_mode: VarInt,
+    },
+    UpdateListed {
+        listed: bool,
+    },
+    UpdateLatency {
+        latency: VarInt,
+    },
+    UpdateDisplayName {
+        display_name: Option<String>,
     },
 }
 

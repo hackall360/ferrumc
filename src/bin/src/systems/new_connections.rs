@@ -2,6 +2,7 @@ use bevy_ecs::prelude::{Commands, Res, Resource};
 use crossbeam_channel::Receiver;
 use ferrumc_core::chunks::chunk_receiver::ChunkReceiver;
 use ferrumc_core::conn::keepalive::KeepAliveTracker;
+use ferrumc_core::inventory::Inventory;
 use ferrumc_core::transform::grounded::OnGround;
 use ferrumc_core::transform::position::Position;
 use ferrumc_core::transform::rotation::Rotation;
@@ -30,6 +31,7 @@ pub fn accept_new_connections(mut cmd: Commands, new_connections: Res<NewConnect
                 last_received_keep_alive: SystemTime::now(),
                 has_received_keep_alive: true,
             },
+            Inventory::default(),
         ));
         trace!("Spawned entity for new connection: {:?}", entity.id());
         if let Err(err) = return_sender.send(entity.id()) {

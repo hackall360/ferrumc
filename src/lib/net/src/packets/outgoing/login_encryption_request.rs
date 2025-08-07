@@ -14,7 +14,11 @@ pub struct LoginEncryptionRequest<'a> {
 }
 
 impl<'a> NetEncode for LoginEncryptionRequest<'a> {
-    fn encode<W: Write>(&self, writer: &mut W, _opts: &NetEncodeOpts) -> Result<(), NetEncodeError> {
+    fn encode<W: Write>(
+        &self,
+        writer: &mut W,
+        _opts: &NetEncodeOpts,
+    ) -> Result<(), NetEncodeError> {
         VarInt::new(0x01).encode(writer, &NetEncodeOpts::None)?;
         self.server_id.encode(writer, &NetEncodeOpts::None)?;
         self.public_key.encode(writer, &NetEncodeOpts::None)?;

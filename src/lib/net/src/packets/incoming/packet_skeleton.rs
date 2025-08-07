@@ -1,9 +1,9 @@
+use crate::ConnState;
+use crate::connection::EncryptedReader;
 use crate::errors::CompressionError::{
     ChecksumMismatch, CompressedPacketTooSmall, GenericDecompressionError, MissingChecksum,
 };
-use crate::connection::EncryptedReader;
 use crate::errors::{NetError, PacketError};
-use crate::ConnState;
 use ferrumc_config::server_config::get_global_config;
 use ferrumc_macros::lookup_packet;
 use ferrumc_net_codec::net_types::var_int::VarInt;
@@ -12,7 +12,7 @@ use std::io::Cursor;
 use tokio::io::AsyncRead;
 use tokio::io::AsyncReadExt;
 use tracing::{debug, error, trace};
-use yazi::{decompress, Format};
+use yazi::{Format, decompress};
 
 /// Represents a minimal parsed network packet (frame) read from the client.
 ///

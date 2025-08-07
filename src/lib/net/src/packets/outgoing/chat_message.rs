@@ -1,4 +1,4 @@
-use ferrumc_macros::{packet, NetEncode};
+use ferrumc_macros::{NetEncode, packet};
 use ferrumc_text::TextComponent;
 use std::io::Write;
 
@@ -13,4 +13,3 @@ impl OutgoingChatMessagePacket {
         Self { message }
     }
 }
-

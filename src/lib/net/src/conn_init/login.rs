@@ -1,16 +1,18 @@
+use crate::ConnState::*;
 use crate::auth::verify_session;
 use crate::compression::compress_packet;
 use crate::conn_init::VarInt;
 use crate::conn_init::{LoginResult, NetDecodeOpts};
 use crate::connection::{EncryptedReader, StreamWriter};
 use crate::errors::{NetError, PacketError};
-use crate::packets::incoming::packet_skeleton::PacketSkeleton;
 use crate::packets::incoming::known_packs::ServerboundKnownPacks;
-use crate::packets::outgoing::login_disconnect::LoginDisconnectPacket;
+use crate::packets::incoming::packet_skeleton::PacketSkeleton;
+use crate::packets::outgoing::container_set_content::ContainerSetContentPacket;
 use crate::packets::outgoing::known_packs::{ClientboundKnownPacks, KnownPack as ClientKnownPack};
-use crate::ConnState::*;
+use crate::packets::outgoing::login_disconnect::LoginDisconnectPacket;
 use ferrumc_config::server_config::get_global_config;
 use ferrumc_core::identity::player_identity::PlayerIdentity;
+use ferrumc_core::inventory::Inventory;
 use ferrumc_macros::lookup_packet;
 use ferrumc_net_codec::decode::NetDecode;
 use ferrumc_net_codec::encode::NetEncodeOpts;
@@ -275,6 +277,12 @@ pub(super) async fn login<R: AsyncRead + Unpin>(
     // 10 Send initial game event (e.g., "change game mode")
     let game_event = crate::packets::outgoing::game_event::GameEventPacket::new(13, 0.0);
     conn_write.send_packet(game_event)?;
+
+    // =============================================================================================
+    // 10b Send initial inventory contents
+    let inventory = Inventory::default();
+    let inv_packet = ContainerSetContentPacket::from_inventory(&inventory);
+    conn_write.send_packet(inv_packet)?;
 
     // =============================================================================================
     // 11 Send center chunk packet (player spawn location)

@@ -1,13 +1,15 @@
 pub mod handshake;
-pub mod login_start;
+pub mod known_packs;
 pub mod login_encryption_response;
+pub mod login_start;
 pub mod ping;
 pub mod status_request;
-pub mod known_packs;
 
+pub mod chat_message;
+pub mod container_close;
+pub mod container_slot_state_changed;
 pub mod keep_alive;
 pub mod packet_skeleton;
-pub mod chat_message;
 
 pub mod place_block;
 pub mod player_command;

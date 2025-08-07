@@ -20,7 +20,10 @@ impl NetDecode for LoginEncryptionResponse {
         let token_len = VarInt::decode(reader, &NetDecodeOpts::None)?.0 as usize;
         let mut verify_token = vec![0u8; token_len];
         reader.read_exact(&mut verify_token)?;
-        Ok(Self { shared_secret, verify_token })
+        Ok(Self {
+            shared_secret,
+            verify_token,
+        })
     }
 
     async fn decode_async<R: AsyncRead + Unpin>(
@@ -33,6 +36,9 @@ impl NetDecode for LoginEncryptionResponse {
         let token_len = VarInt::decode_async(reader, &NetDecodeOpts::None).await?.0 as usize;
         let mut verify_token = vec![0u8; token_len];
         reader.read_exact(&mut verify_token).await?;
-        Ok(Self { shared_secret, verify_token })
+        Ok(Self {
+            shared_secret,
+            verify_token,
+        })
     }
 }

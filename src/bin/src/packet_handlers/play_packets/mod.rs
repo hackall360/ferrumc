@@ -1,5 +1,5 @@
-use bevy_ecs::schedule::Schedule;
 use crate::systems::chat_message;
+use bevy_ecs::schedule::Schedule;
 
 mod chunk_batch_ack;
 mod confirm_player_teleport;

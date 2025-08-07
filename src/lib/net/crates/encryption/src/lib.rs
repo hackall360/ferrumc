@@ -1,7 +1,7 @@
 pub mod errors;
 
-use aes::Aes128;
 use aes::cipher::{AsyncStreamCipher, KeyIvInit};
+use aes::Aes128;
 use cfb8::{Decryptor as Cfb8Decryptor, Encryptor as Cfb8Encryptor};
 use errors::NetEncryptionError;
 use rsa::pkcs1v15::Pkcs1v15Encrypt;

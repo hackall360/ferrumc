@@ -1,3 +1,4 @@
+use crate::commands::{CommandDispatcher, SayCommand};
 use crate::systems::new_connections::NewConnectionRecv;
 use bevy_ecs::prelude::World;
 use crossbeam_channel::Receiver;
@@ -19,4 +20,8 @@ pub fn register_resources(
     world.insert_resource(WorldSyncTracker {
         last_synced: std::time::Instant::now(),
     });
+
+    let mut dispatcher = CommandDispatcher::new();
+    dispatcher.register("say", SayCommand);
+    world.insert_resource(dispatcher);
 }

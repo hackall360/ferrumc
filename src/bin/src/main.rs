@@ -18,6 +18,7 @@ pub(crate) mod errors;
 use crate::cli::{CLIArgs, Command, ImportArgs};
 mod chunk_sending;
 mod cli;
+mod commands;
 mod game_loop;
 mod packet_handlers;
 mod register_events;

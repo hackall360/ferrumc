@@ -1,12 +1,12 @@
-use crate::World;
-use crate::block_id::{BLOCK2ID, BlockId, ID2BLOCK};
+use crate::block_id::{BlockId, BLOCK2ID, ID2BLOCK};
 use crate::chunk_format::{BiomeStates, BlockStates, Chunk, PaletteType, Section};
 use crate::errors::WorldError;
 use crate::vanilla_chunk_format::BlockData;
+use crate::World;
 use ferrumc_general_purpose::data_packing::i32::read_nbit_i32;
 use ferrumc_net_codec::net_types::var_int::VarInt;
-use std::collections::HashMap;
 use std::collections::hash_map::Entry;
+use std::collections::HashMap;
 use std::sync::Arc;
 use tracing::{debug, error, warn};
 
@@ -194,8 +194,72 @@ impl BlockStates {
                     palette: palette.clone(),
                 }
             }
-            _ => {
-                todo!("Implement resizing for direct palette")
+            PaletteType::Direct {
+                bits_per_block,
+                data,
+            } => {
+                // Step 1: read existing packed data into a list of integers
+                let mut normalised_ints = Vec::with_capacity(4096);
+                let mut values_read = 0;
+                for long in data.iter() {
+                    let mut bit_offset = 0;
+                    while bit_offset + *bits_per_block as usize <= 64 {
+                        if values_read >= 4096 {
+                            break;
+                        }
+                        let value = ferrumc_general_purpose::data_packing::u32::read_nbit_u32(
+                            long,
+                            *bits_per_block,
+                            bit_offset as u32,
+                        )? as i32;
+                        let max_int_value = (1 << new_bit_size) - 1;
+                        if value > max_int_value {
+                            return Err(WorldError::InvalidBlockStateData(format!(
+                                "Value {value} exceeds maximum value for {new_bit_size}-bit block state",
+                            )));
+                        }
+                        normalised_ints.push(value);
+                        values_read += 1;
+                        bit_offset += *bits_per_block as usize;
+                    }
+                    if values_read >= 4096 {
+                        break;
+                    }
+                }
+                if normalised_ints.len() != 4096 {
+                    return Err(WorldError::InvalidBlockStateData(format!(
+                        "Expected 4096 block states, but got {}",
+                        normalised_ints.len()
+                    )));
+                }
+                // Step 2: repack into new data format
+                let mut new_data = Vec::new();
+                let mut current_long: i64 = 0;
+                let mut bit_position = 0;
+                for &value in &normalised_ints {
+                    current_long |= (value as i64) << bit_position;
+                    bit_position += new_bit_size;
+                    if bit_position >= 64 {
+                        new_data.push(current_long);
+                        current_long = (value as i64) >> (new_bit_size - (bit_position - 64));
+                        bit_position -= 64;
+                    }
+                }
+                if bit_position > 0 {
+                    new_data.push(current_long);
+                }
+                let expected_size = (4096 * new_bit_size).div_ceil(64);
+                if new_data.len() != expected_size {
+                    return Err(WorldError::InvalidBlockStateData(format!(
+                        "Expected packed data size of {}, but got {}",
+                        expected_size,
+                        new_data.len()
+                    )));
+                }
+                self.block_data = PaletteType::Direct {
+                    bits_per_block: new_bit_size as u8,
+                    data: new_data,
+                };
             }
         };
         Ok(())
@@ -346,8 +410,65 @@ impl Chunk {
                     )));
                 }
             }
-            PaletteType::Direct { .. } => {
-                todo!("Implement direct palette for set_block");
+            PaletteType::Direct {
+                bits_per_block,
+                data,
+            } => {
+                // Update block counts for old block
+                match section.block_states.block_counts.entry(old_block) {
+                    Entry::Occupied(mut occ_entry) => {
+                        let count = occ_entry.get_mut();
+                        if *count <= 0 {
+                            return match old_block.to_block_data() {
+                                Some(block_data) => {
+                                    error!("Block count is zero for block: {:?}", block_data);
+                                    Err(WorldError::InvalidBlockStateData(format!(
+                                        "Block count is zero for block: {block_data:?}"
+                                    )))
+                                }
+                                None => {
+                                    error!(
+                                        "Block count is zero for unknown block ID: {}",
+                                        old_block.0
+                                    );
+                                    Err(WorldError::InvalidBlockId(old_block.0))
+                                }
+                            };
+                        }
+                        *count -= 1;
+                    }
+                    Entry::Vacant(empty_entry) => {
+                        warn!("Block not found in block counts: {:?}", old_block);
+                        empty_entry.insert(0);
+                    }
+                }
+                // Increment new block count
+                if let Some(e) = section.block_states.block_counts.get(&block) {
+                    section.block_states.block_counts.insert(block, e + 1);
+                } else {
+                    section.block_states.block_counts.insert(block, 1);
+                }
+                // Write block ID directly into packed data
+                let blocks_per_i64 = (64f64 / *bits_per_block as f64).floor() as usize;
+                let index =
+                    ((y.abs() & 0xf) * 256 + (z.abs() & 0xf) * 16 + (x.abs() & 0xf)) as usize;
+                let i64_index = index / blocks_per_i64;
+                let packed_u64 =
+                    data.get_mut(i64_index)
+                        .ok_or(WorldError::InvalidBlockStateData(format!(
+                            "Invalid block state data at index {i64_index}"
+                        )))?;
+                let offset = (index % blocks_per_i64) * *bits_per_block as usize;
+                if let Err(e) = ferrumc_general_purpose::data_packing::u32::write_nbit_u32(
+                    packed_u64,
+                    offset as u32,
+                    block.0,
+                    *bits_per_block,
+                ) {
+                    return Err(WorldError::InvalidBlockStateData(format!(
+                        "Failed to write block: {e}"
+                    )));
+                }
             }
         }
 
@@ -429,7 +550,26 @@ impl Chunk {
                 let palette_id = palette.get(id as usize).ok_or(WorldError::ChunkNotFound)?;
                 Ok(BlockId::from_varint(*palette_id))
             }
-            &PaletteType::Direct { .. } => todo!("Implement direct palette for get_block"),
+            PaletteType::Direct {
+                bits_per_block,
+                data,
+            } => {
+                let blocks_per_i64 = (64f64 / *bits_per_block as f64).floor() as usize;
+                let index = ((y & 0xf) * 256 + (z & 0xf) * 16 + (x & 0xf)) as usize;
+                let i64_index = index / blocks_per_i64;
+                let packed_u64 = data
+                    .get(i64_index)
+                    .ok_or(WorldError::InvalidBlockStateData(format!(
+                        "Invalid block state data at index {i64_index}"
+                    )))?;
+                let offset = (index % blocks_per_i64) * *bits_per_block as usize;
+                let id = ferrumc_general_purpose::data_packing::u32::read_nbit_u32(
+                    packed_u64,
+                    *bits_per_block,
+                    offset as u32,
+                )?;
+                Ok(BlockId(id))
+            }
         }
     }
 
@@ -562,7 +702,15 @@ impl Section {
                 }
             }
             PaletteType::Direct { .. } => {
-                todo!("Implement optimisation for direct palette");
+                // Remove blocks with zero counts
+                self.block_states.block_counts.retain(|_, count| *count > 0);
+                // If only one block remains, convert to single palette
+                if self.block_states.block_counts.len() == 1 {
+                    let block = *self.block_states.block_counts.keys().next().unwrap();
+                    self.block_states.block_data = PaletteType::Single(block.to_varint());
+                    self.block_states.block_counts.clear();
+                    self.block_states.block_counts.insert(block, 4096);
+                }
             }
         };
 

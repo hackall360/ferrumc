@@ -1,5 +1,5 @@
 use crate::biome_id::get_biome_id;
-use crate::block_id::{BLOCK2ID, BlockId};
+use crate::block_id::{BlockId, BLOCK2ID};
 use crate::vanilla_chunk_format;
 use crate::vanilla_chunk_format::VanillaChunk;
 use crate::{errors::WorldError, vanilla_chunk_format::VanillaHeightmaps};

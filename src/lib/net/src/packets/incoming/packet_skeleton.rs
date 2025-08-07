@@ -91,7 +91,7 @@ impl PacketSkeleton {
     /// VarInt(length) | VarInt(packet_id) | [payload bytes...]
     /// ```
     ///
-    /// - Filters out `custom_payload` plugin messages (0x14) in Play/Configuration states
+    /// - Filters out `custom_payload` plugin messages (0x14) in the Play state
     ///   to ignore unused plugin channels.
     async fn read_uncompressed<R: AsyncRead + Unpin>(
         reader: &mut R,
@@ -124,10 +124,8 @@ impl PacketSkeleton {
             let id = VarInt::read_async(&mut buf).await?;
 
             // Ignore plugin messages (unused channels)
-            if (id.0 == lookup_packet!("play", "serverbound", "custom_payload")
-                && state == ConnState::Play)
-                || (id.0 == lookup_packet!("configuration", "serverbound", "custom_payload")
-                    && state == ConnState::Configuration)
+            if id.0 == lookup_packet!("play", "serverbound", "custom_payload")
+                && state == ConnState::Play
             {
                 trace!("Ignored serverbound plugin message (0x14)");
                 continue;
@@ -197,10 +195,8 @@ impl PacketSkeleton {
                 let id = VarInt::read_async(&mut cursor).await?;
 
                 // Ignore plugin messages
-                if (id.0 == lookup_packet!("play", "serverbound", "custom_payload")
-                    && state == ConnState::Play)
-                    || (id.0 == lookup_packet!("configuration", "serverbound", "custom_payload")
-                        && state == ConnState::Configuration)
+                if id.0 == lookup_packet!("play", "serverbound", "custom_payload")
+                    && state == ConnState::Play
                 {
                     trace!("Ignored uncompressed serverbound plugin message (0x14)");
                     continue;
@@ -271,10 +267,8 @@ impl PacketSkeleton {
             let id = VarInt::read_async(&mut cursor).await?;
 
             // Ignore plugin messages
-            if (state == ConnState::Play
-                && id.0 == lookup_packet!("play", "serverbound", "custom_payload"))
-                || (state == ConnState::Configuration
-                    && id.0 == lookup_packet!("configuration", "serverbound", "custom_payload"))
+            if state == ConnState::Play
+                && id.0 == lookup_packet!("play", "serverbound", "custom_payload")
             {
                 trace!("Ignored compressed serverbound plugin message (0x14)");
                 continue;

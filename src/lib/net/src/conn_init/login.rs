@@ -4,7 +4,6 @@ use crate::conn_init::{LoginResult, NetDecodeOpts};
 use crate::connection::StreamWriter;
 use crate::errors::{NetError, PacketError};
 use crate::packets::incoming::packet_skeleton::PacketSkeleton;
-use crate::packets::outgoing::registry_data::REGISTRY_PACKETS;
 use crate::ConnState::*;
 use ferrumc_config::server_config::get_global_config;
 use ferrumc_core::identity::player_identity::PlayerIdentity;
@@ -14,18 +13,15 @@ use ferrumc_net_codec::encode::NetEncodeOpts;
 use ferrumc_net_codec::net_types::length_prefixed_vec::LengthPrefixedVec;
 use ferrumc_state::GlobalState;
 use tokio::net::tcp::OwnedReadHalf;
-use tracing::{error, trace};
+use tracing::error;
 use uuid::Uuid;
 
 /// Handles the **login sequence** for a newly connecting client.
 ///
-/// This function follows the Minecraft login/configuration handshake:
+/// This function follows the Minecraft 1.20.1 login handshake:
 /// 1. Reads the initial login packet and authenticates the username/UUID.
 /// 2. Optionally enables network compression.
-/// 3. Sends required handshake completion packets:
-///    - Login success
-///    - Configuration phase packets
-///    - Registry and world data
+/// 3. Sends login success and transitions directly into the Play state.
 /// 4. Spawns the player in the world (initial chunks, teleport confirmation).
 ///
 /// # Returns
@@ -94,112 +90,13 @@ pub(super) async fn login(
     };
 
     // =============================================================================================
-    // 4 Wait for client Login Acknowledged packet
-    let mut skel = PacketSkeleton::new(conn_read, compressed, Login).await?;
-    let expected_id = lookup_packet!("login", "serverbound", "login_acknowledged");
-
-    if skel.id != expected_id {
-        return Err(NetError::Packet(PacketError::UnexpectedPacket {
-            expected: expected_id,
-            received: skel.id,
-            state: Login,
-        }));
-    }
-
-    let _login_acknowledged =
-        crate::packets::incoming::login_acknowledged::LoginAcknowledgedPacket::decode(
-            &mut skel.data,
-            &NetDecodeOpts::None,
-        )?;
-
-    // =============================================================================================
-    // 5 Read Client Information (locale, view distance, etc.)
-    let mut skel = PacketSkeleton::new(conn_read, compressed, Configuration).await?;
-    let expected_id = lookup_packet!("configuration", "serverbound", "client_information");
-    if skel.id != expected_id {
-        return Err(NetError::Packet(PacketError::UnexpectedPacket {
-            expected: expected_id,
-            received: skel.id,
-            state: Configuration,
-        }));
-    }
-
-    let client_info = crate::packets::incoming::client_information::ClientInformation::decode(
-        &mut skel.data,
-        &NetDecodeOpts::None,
-    )?;
-
-    trace!(
-        "Client information: {{ locale: {}, view_distance: {}, chat_mode: {}, chat_colors: {}, displayed_skin_parts: {} }}",
-        client_info.locale,
-        client_info.view_distance,
-        client_info.chat_mode,
-        client_info.chat_colors,
-        client_info.displayed_skin_parts
-    );
-
-    // =============================================================================================
-    // 6 Send known resource packs list
-    let client_bound_known_packs =
-        crate::packets::outgoing::client_bound_known_packs::ClientBoundKnownPacksPacket::new();
-    conn_write.send_packet(client_bound_known_packs)?;
-
-    // =============================================================================================
-    // 7 Read client's selected known packs (currently ignored)
-    let mut skel = PacketSkeleton::new(conn_read, compressed, Configuration).await?;
-    let expected_id = lookup_packet!("configuration", "serverbound", "select_known_packs");
-    if skel.id != expected_id {
-        return Err(NetError::Packet(PacketError::UnexpectedPacket {
-            expected: expected_id,
-            received: skel.id,
-            state: Configuration,
-        }));
-    }
-
-    let _server_bound_known_packs =
-        crate::packets::incoming::server_bound_known_packs::ServerBoundKnownPacks::decode(
-            &mut skel.data,
-            &NetDecodeOpts::None,
-        )?;
-
-    // =============================================================================================
-    // 8 Send server registry data (dimensions, biomes, etc.)
-    for packet in &*REGISTRY_PACKETS {
-        conn_write.send_packet_ref(packet)?;
-    }
-
-    // =============================================================================================
-    // 9 Signal end of configuration phase
-    let finish_config_packet =
-        crate::packets::outgoing::finish_configuration::FinishConfigurationPacket;
-    conn_write.send_packet(finish_config_packet)?;
-
-    // =============================================================================================
-    // 10 Wait for client's finish_configuration ack
-    let mut skel = PacketSkeleton::new(conn_read, compressed, Configuration).await?;
-    let expected_id = lookup_packet!("configuration", "serverbound", "finish_configuration");
-    if skel.id != expected_id {
-        return Err(NetError::Packet(PacketError::UnexpectedPacket {
-            expected: expected_id,
-            received: skel.id,
-            state: Configuration,
-        }));
-    }
-
-    let _finish_config_ack =
-        crate::packets::incoming::ack_finish_configuration::AckFinishConfigurationPacket::decode(
-            &mut skel.data,
-            &NetDecodeOpts::None,
-        )?;
-
-    // =============================================================================================
-    // 11 Send login_play packet to switch to Play state
+    // 4 Send login_play packet to switch to Play state
     let login_play =
         crate::packets::outgoing::login_play::LoginPlayPacket::new(player_identity.short_uuid);
     conn_write.send_packet(login_play)?;
 
     // =============================================================================================
-    // 12 Send initial player position sync (requires teleport confirmation)
+    // 5 Send initial player position sync (requires teleport confirmation)
     let teleport_id_i32: i32 = (rand::random::<u32>() & 0x3FFF_FFFF) as i32;
     let sync_player_pos =
         crate::packets::outgoing::synchronize_player_position::SynchronizePlayerPositionPacket {
@@ -209,7 +106,7 @@ pub(super) async fn login(
     conn_write.send_packet(sync_player_pos)?;
 
     // =============================================================================================
-    // 13 Await client's teleport acceptance
+    // 6 Await client's teleport acceptance
     let mut skel = PacketSkeleton::new(conn_read, compressed, Play).await?;
     let expected_id = lookup_packet!("play", "serverbound", "accept_teleportation");
     if skel.id != expected_id {
@@ -234,7 +131,7 @@ pub(super) async fn login(
     }
 
     // =============================================================================================
-    // 14 Receive first movement packet from player
+    // 7 Receive first movement packet from player
     let mut skel = PacketSkeleton::new(conn_read, compressed, Play).await?;
     let expected_id = lookup_packet!("play", "serverbound", "move_player_pos_rot");
     if skel.id != expected_id {
@@ -252,17 +149,17 @@ pub(super) async fn login(
         )?;
 
     // =============================================================================================
-    // 15 Send initial game event (e.g., "change game mode")
+    // 8 Send initial game event (e.g., "change game mode")
     let game_event = crate::packets::outgoing::game_event::GameEventPacket::new(13, 0.0);
     conn_write.send_packet(game_event)?;
 
     // =============================================================================================
-    // 16 Send center chunk packet (player spawn location)
+    // 9 Send center chunk packet (player spawn location)
     let center_chunk = crate::packets::outgoing::set_center_chunk::SetCenterChunk::new(0, 0);
     conn_write.send_packet(center_chunk)?;
 
     // =============================================================================================
-    // 17 Load and send surrounding chunks within render distance
+    // 10 Load and send surrounding chunks within render distance
     let radius = get_global_config().chunk_render_distance as i32;
 
     let mut batch = state.thread_pool.batch();

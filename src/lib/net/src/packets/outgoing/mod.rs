@@ -6,6 +6,7 @@ pub mod game_event;
 pub mod keep_alive;
 pub mod login_disconnect;
 pub mod login_play;
+pub mod login_encryption_request;
 pub mod login_success;
 pub mod ping_response;
 pub mod set_center_chunk;

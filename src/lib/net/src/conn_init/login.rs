@@ -61,12 +61,13 @@ pub(super) async fn login<R: AsyncRead + Unpin>(
         &mut skel.data,
         &NetDecodeOpts::None,
     )?;
-
-    let mut player_uuid = login_start.uuid;
-
-    // =============================================================================================
-    // 2 Handle online-mode encryption negotiation
-    if get_global_config().online_mode {
+    let player_uuid = if !get_global_config().online_mode {
+        Uuid::new_v3(
+            &Uuid::NAMESPACE_DNS,
+            format!("OfflinePlayer:{}", login_start.username).as_bytes(),
+        )
+        .as_u128()
+    } else {
         use crate::packets::incoming::login_encryption_response::LoginEncryptionResponse;
         use crate::packets::outgoing::login_encryption_request::LoginEncryptionRequest;
 
@@ -114,9 +115,7 @@ pub(super) async fn login<R: AsyncRead + Unpin>(
         )
         .await
         {
-            Ok(uuid) => {
-                player_uuid = uuid.as_u128();
-            }
+            Ok(uuid) => uuid.as_u128(),
             Err(err) => {
                 error!("Session verification failed: {:?}", err);
                 let disconnect = LoginDisconnectPacket::new("Failed to verify session");
@@ -130,7 +129,7 @@ pub(super) async fn login<R: AsyncRead + Unpin>(
                 ));
             }
         }
-    }
+    };
 
     // =============================================================================================
     // 3 Negotiate compression if configured

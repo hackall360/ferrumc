@@ -10,6 +10,8 @@ mod player_command;
 mod container_slot_state_changed;
 mod container_close;
 mod player_loaded;
+mod chat_ack;
+mod client_information;
 mod set_player_position;
 mod set_player_position_and_rotation;
 mod set_player_rotation;
@@ -29,6 +31,8 @@ pub fn register_packet_handlers(schedule: &mut Schedule) {
     schedule.add_systems(container_slot_state_changed::handle);
     schedule.add_systems(container_close::handle);
     schedule.add_systems(chat_message::broadcast_chat_messages);
+    schedule.add_systems(chat_ack::handle);
+    schedule.add_systems(client_information::handle);
     schedule.add_systems(set_player_position::handle);
     schedule.add_systems(set_player_position_and_rotation::handle);
     schedule.add_systems(set_player_rotation::handle);

@@ -28,3 +28,5 @@ pub mod player_input;
 
 pub mod block_entity_tag_query;
 pub mod player_loaded;
+pub mod chat_ack;
+pub mod client_information;

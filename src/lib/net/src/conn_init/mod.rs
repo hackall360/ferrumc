@@ -1,8 +1,10 @@
 mod login;
 mod status;
+mod transfer;
 
 use crate::conn_init::login::login;
 use crate::conn_init::status::status;
+use crate::conn_init::transfer::transfer;
 use crate::connection::{EncryptedReader, StreamWriter};
 use crate::errors::{NetError, PacketError};
 use crate::packets::incoming::handshake::Handshake;
@@ -43,7 +45,7 @@ pub const PROTOCOL_VERSION_1_20_1: i32 = 763;
 /// - Transitioning the connection state to one of:
 ///   - **Status**: For server list ping requests (NextState = 1).
 ///   - **Login**: For actual login attempts (NextState = 2).
-///   - **Transfer**: (NextState = 3) – not implemented yet.
+///   - **Transfer**: For cross-server redirection requests (NextState = 3).
 ///
 /// # Parameters
 /// - `conn_read`: Read half of the TCP stream for incoming data.
@@ -101,11 +103,7 @@ pub async fn handle_handshake<R: AsyncRead + Unpin>(
     match hs_packet.next_state.0 {
         1 => status(conn_read, conn_write, state).await,
         2 => login(conn_read, conn_write, state).await,
-        3 => {
-            // Placeholder for a potential server transfer state (not supported yet).
-            trace!("Transfer state (3) not implemented");
-            Err(NetError::InvalidState(hs_packet.next_state.0 as u8))
-        }
+        3 => transfer(hs_packet, conn_read, conn_write, state).await,
         invalid_state => {
             error!("Invalid handshake state: {}", invalid_state);
             Err(NetError::InvalidState(invalid_state as u8))

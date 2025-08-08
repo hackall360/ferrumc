@@ -2,6 +2,7 @@ use crate::packets::slot::Slot;
 use ferrumc_core::inventory::Inventory;
 use ferrumc_macros::{NetEncode, packet};
 use ferrumc_net_codec::net_types::length_prefixed_vec::LengthPrefixedVec;
+use std::io::Write;
 
 #[derive(NetEncode)]
 #[packet(packet_id = "container_set_content", state = "play")]
@@ -14,9 +15,8 @@ pub struct ContainerSetContentPacket {
 impl ContainerSetContentPacket {
     pub fn from_inventory(inv: &Inventory) -> Self {
         let slot_vec: Vec<Slot> = inv
-            .main
+            .all_slots()
             .iter()
-            .chain(inv.hotbar.iter())
             .map(|s| Slot::from_stack(s.as_ref()))
             .collect();
         Self {

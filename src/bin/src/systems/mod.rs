@@ -1,3 +1,4 @@
+pub mod change_dimension;
 pub mod chat_message;
 pub mod connection_killer;
 mod cross_chunk_boundary;
@@ -13,6 +14,7 @@ pub fn register_game_systems(schedule: &mut bevy_ecs::schedule::Schedule) {
     schedule.add_systems(new_connections::accept_new_connections);
     schedule.add_systems(cross_chunk_boundary::cross_chunk_boundary);
     schedule.add_systems(player_count_update::player_count_updater);
+    schedule.add_systems(change_dimension::handle_change_dimension);
     schedule.add_systems(world_sync::sync_world);
 
     // Should always be last

@@ -60,7 +60,7 @@ pub fn send_chunks(
                 // Don't bother saving the chunk if it hasn't been edited yet
                 let chunk = state_clone
                     .terrain_generator
-                    .generate_chunk(x, z)
+                    .generate_chunk(x, z, &dim)
                     .map_err(|err| NetError::Misc(err.to_string()))?;
                 Ok((ChunkAndLightData::from_chunk(&chunk), x, z))
             }?;

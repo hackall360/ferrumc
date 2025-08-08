@@ -10,6 +10,7 @@ pub mod vanilla_chunk_format;
 
 use crate::chunk_format::Chunk;
 use crate::errors::WorldError;
+use dashmap::DashMap;
 use deepsize::DeepSizeOf;
 use ferrumc_config::server_config::get_global_config;
 use ferrumc_general_purpose::paths::get_root_path;
@@ -25,7 +26,7 @@ use tracing::{error, trace, warn};
 #[derive(Clone)]
 pub struct World {
     storage_backend: LmdbBackend,
-    cache: Cache<(i32, i32, String), Arc<Chunk>>,
+    caches: DashMap<String, Cache<(i32, i32), Arc<Chunk>>>,
 }
 
 fn check_config_validity() -> Result<(), WorldError> {
@@ -99,21 +100,37 @@ impl World {
             exit(1);
         }
 
-        let eviction_listener = move |key, _, cause| {
+        let world = World {
+            storage_backend,
+            caches: DashMap::new(),
+        };
+        world.add_dimension("overworld");
+        world
+    }
+
+    fn build_cache() -> Cache<(i32, i32), Arc<Chunk>> {
+        let eviction_listener = move |key: Arc<(i32, i32)>, _value: Arc<Chunk>, cause| {
             trace!("Evicting key: {:?}, cause: {:?}", key, cause);
         };
-
-        let cache = Cache::builder()
+        Cache::builder()
             .eviction_listener(eviction_listener)
             .weigher(|_k, v: &Arc<Chunk>| v.deep_size_of() as u32)
             .time_to_live(Duration::from_secs(get_global_config().database.cache_ttl))
             .max_capacity(get_global_config().database.cache_capacity * 1024)
-            .build();
+            .build()
+    }
 
-        World {
-            storage_backend,
-            cache,
-        }
+    pub fn add_dimension(&self, dimension: &str) {
+        self.caches
+            .entry(dimension.to_string())
+            .or_insert_with(Self::build_cache);
+    }
+
+    pub fn dimensions(&self) -> Vec<String> {
+        self.caches
+            .iter()
+            .map(|entry| entry.key().clone())
+            .collect()
     }
 }
 

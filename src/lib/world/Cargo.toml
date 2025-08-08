@@ -30,6 +30,7 @@ moka = { workspace = true, features = ["sync"] }
 ahash = { workspace = true }
 rand = { workspace = true }
 yazi = { workspace = true }
+dashmap = { workspace = true }
 
 [[bench]]
 name = "world_bench"

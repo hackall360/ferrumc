@@ -89,7 +89,7 @@ fn generate_chunks(state: GlobalState) -> Result<(), BinaryError> {
         batch.execute(move || {
             let chunk = state_clone
                 .terrain_generator
-                .generate_chunk(x, z)
+                .generate_chunk(x, z, "overworld")
                 .map(Arc::new);
             if let Err(e) = chunk {
                 error!("Error generating chunk ({}, {}): {:?}", x, z, e);

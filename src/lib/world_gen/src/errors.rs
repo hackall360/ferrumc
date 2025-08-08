@@ -9,4 +9,6 @@ pub enum WorldGenError {
     ChunkGenerationError(String),
     #[error("World error: {0}")]
     WorldError(#[from] WorldError),
+    #[error("Invalid dimension")]
+    InvalidDimension,
 }

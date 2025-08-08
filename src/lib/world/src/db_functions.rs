@@ -17,8 +17,10 @@ impl World {
     /// chunk data. If the chunk already exists in the cache, it will be updated with the new data.
     pub fn save_chunk(&self, chunk: Arc<Chunk>) -> Result<(), WorldError> {
         let ret = save_chunk_internal(self, &chunk);
-        self.cache
-            .insert((chunk.x, chunk.z, chunk.dimension.clone()), chunk);
+        self.add_dimension(&chunk.dimension);
+        if let Some(cache) = self.caches.get(&chunk.dimension) {
+            cache.insert((chunk.x, chunk.z), chunk);
+        }
         ret
     }
 
@@ -26,13 +28,17 @@ impl World {
     /// from the cache instead of the storage backend. If the chunk is not in the cache, it will be
     /// loaded from the storage backend and inserted into the cache.
     pub fn load_chunk(&self, x: i32, z: i32, dimension: &str) -> Result<Arc<Chunk>, WorldError> {
-        if let Some(chunk) = self.cache.get(&(x, z, dimension.to_string())) {
-            return Ok(chunk);
+        self.add_dimension(dimension);
+        if let Some(cache) = self.caches.get(dimension) {
+            if let Some(chunk) = cache.get(&(x, z)) {
+                return Ok(chunk);
+            }
         }
         let chunk = load_chunk_internal(self, x, z, dimension);
         if let Ok(ref chunk) = chunk {
-            self.cache
-                .insert((x, z, dimension.to_string()), Arc::from(chunk.clone()));
+            if let Some(cache) = self.caches.get(dimension) {
+                cache.insert((x, z), Arc::from(chunk.clone()));
+            }
         }
         chunk.map(Arc::new)
     }
@@ -47,8 +53,11 @@ impl World {
     /// chunk is not in the cache, it will check the storage backend for the chunk, returning true
     /// if it exists and false if it does not.
     pub fn chunk_exists(&self, x: i32, z: i32, dimension: &str) -> Result<bool, WorldError> {
-        if self.cache.contains_key(&(x, z, dimension.to_string())) {
-            return Ok(true);
+        self.add_dimension(dimension);
+        if let Some(cache) = self.caches.get(dimension) {
+            if cache.contains_key(&(x, z)) {
+                return Ok(true);
+            }
         }
         chunk_exists_internal(self, x, z, dimension)
     }
@@ -57,7 +66,9 @@ impl World {
     ///
     /// This function will remove the chunk from the cache and delete it from the storage backend.
     pub fn delete_chunk(&self, x: i32, z: i32, dimension: &str) -> Result<(), WorldError> {
-        self.cache.remove(&(x, z, dimension.to_string()));
+        if let Some(cache) = self.caches.get(dimension) {
+            cache.remove(&(x, z));
+        }
         delete_chunk_internal(self, x, z, dimension)
     }
 
@@ -67,9 +78,11 @@ impl World {
     /// storage backend. This should be run after inserting or updating a large number of chunks
     /// to ensure that the data is properly saved to disk.
     pub fn sync(&self) -> Result<(), WorldError> {
-        for (k, v) in self.cache.iter() {
-            trace!("Syncing chunk: {:?}", (k.0, k.1));
-            save_chunk_internal(self, &v)?;
+        for cache in self.caches.iter() {
+            for (k, v) in cache.value().iter() {
+                trace!("Syncing chunk: {:?}", (k.0, k.1));
+                save_chunk_internal(self, &v)?;
+            }
         }
         sync_internal(self)
     }
@@ -86,17 +99,22 @@ impl World {
         let mut found_chunks = Vec::new();
         let mut missing_chunks = Vec::new();
         for coord in coords {
-            if let Some(chunk) = self.cache.get(&(coord.0, coord.1, coord.2.to_string())) {
-                found_chunks.push(chunk);
-            } else {
-                missing_chunks.push(*coord);
+            self.add_dimension(coord.2);
+            if let Some(cache) = self.caches.get(coord.2) {
+                if let Some(chunk) = cache.get(&(coord.0, coord.1)) {
+                    found_chunks.push(chunk);
+                    continue;
+                }
             }
+            missing_chunks.push(*coord);
         }
         let fetched = load_chunk_batch_internal(self, &missing_chunks)?;
         for chunk in fetched {
             let chunk = Arc::new(chunk);
-            self.cache
-                .insert((chunk.x, chunk.z, chunk.dimension.clone()), chunk.clone());
+            self.add_dimension(&chunk.dimension);
+            if let Some(cache) = self.caches.get(&chunk.dimension) {
+                cache.insert((chunk.x, chunk.z), chunk.clone());
+            }
             found_chunks.push(chunk);
         }
         Ok(found_chunks)
@@ -108,10 +126,12 @@ impl World {
     /// without returning the chunk. This is useful for preloading chunks into the cache before
     /// they are needed.
     pub fn pre_cache(&self, x: i32, z: i32, dimension: &str) -> Result<(), WorldError> {
-        if self.cache.get(&(x, z, dimension.to_string())).is_none() {
-            let chunk = load_chunk_internal(self, x, z, dimension)?;
-            self.cache
-                .insert((x, z, dimension.to_string()), Arc::new(chunk));
+        self.add_dimension(dimension);
+        if let Some(cache) = self.caches.get(dimension) {
+            if cache.get(&(x, z)).is_none() {
+                let chunk = load_chunk_internal(self, x, z, dimension)?;
+                cache.insert((x, z), Arc::new(chunk));
+            }
         }
         Ok(())
     }

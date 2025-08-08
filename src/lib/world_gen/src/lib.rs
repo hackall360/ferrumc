@@ -1,9 +1,13 @@
 mod biomes;
+mod dimensions;
 pub mod errors;
 
 use crate::errors::WorldGenError;
+use dashmap::DashMap;
+use dimensions::overworld::OverworldGenerator;
 use ferrumc_world::chunk_format::Chunk;
 use noise::{Clamp, NoiseFn, OpenSimplex};
+use std::sync::Arc;
 
 /// Trait for generating a biome
 ///
@@ -19,6 +23,15 @@ pub(crate) trait BiomeGenerator {
     ) -> Result<Chunk, WorldGenError>;
 }
 
+pub trait DimensionGenerator: Send + Sync {
+    fn generate_chunk(
+        &self,
+        x: i32,
+        z: i32,
+        noise: &NoiseGenerator,
+    ) -> Result<Chunk, WorldGenError>;
+}
+
 pub(crate) struct NoiseGenerator {
     pub(crate) layers: Vec<Clamp<f64, OpenSimplex, 2>>,
 }
@@ -26,6 +39,7 @@ pub(crate) struct NoiseGenerator {
 pub struct WorldGenerator {
     _seed: u64,
     noise_generator: NoiseGenerator,
+    generators: DashMap<String, Arc<dyn DimensionGenerator>>,
 }
 
 impl NoiseGenerator {
@@ -51,19 +65,22 @@ impl NoiseGenerator {
 
 impl WorldGenerator {
     pub fn new(seed: u64) -> Self {
-        Self {
+        let generator = WorldGenerator {
             _seed: seed,
             noise_generator: NoiseGenerator::new(seed),
+            generators: DashMap::new(),
+        };
+        generator
+            .generators
+            .insert("overworld".to_string(), Arc::new(OverworldGenerator));
+        generator
+    }
+
+    pub fn generate_chunk(&self, x: i32, z: i32, dimension: &str) -> Result<Chunk, WorldGenError> {
+        if let Some(generator) = self.generators.get(dimension) {
+            generator.generate_chunk(x, z, &self.noise_generator)
+        } else {
+            Err(WorldGenError::InvalidDimension)
         }
-    }
-
-    fn get_biome(&self, _x: i32, _z: i32) -> Box<dyn BiomeGenerator> {
-        // Implement biome selection here
-        Box::new(biomes::plains::PlainsBiome)
-    }
-
-    pub fn generate_chunk(&self, x: i32, z: i32) -> Result<Chunk, WorldGenError> {
-        let biome = self.get_biome(x, z);
-        biome.generate_chunk(x, z, &self.noise_generator)
     }
 }

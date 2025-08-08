@@ -378,6 +378,9 @@
       },
       "minecraft:tags": {
         "protocol_id": 110
+      },
+      "minecraft:chat_message": {
+        "protocol_id": 111
       }
     },
     "serverbound": {
@@ -397,7 +400,7 @@
         "protocol_id": 4
       },
       "minecraft:chat_message": {
-        "protocol_id": 5
+        "protocol_id": 111
       },
       "minecraft:chat_session_update": {
         "protocol_id": 6

@@ -27,7 +27,12 @@ impl Inventory {
     }
 
     pub fn get_slot(&self, index: usize) -> Option<&Slot> {
-        self.all_slots().get(index)
+        if index < self.main.len() {
+            self.main.get(index)
+        } else {
+            let idx = index.checked_sub(self.main.len())?;
+            self.hotbar.get(idx)
+        }
     }
 
     pub fn all_slots(&self) -> Vec<Slot> {

@@ -2,6 +2,7 @@ use ferrumc_core::inventory::ItemStack;
 use ferrumc_macros::{NetDecode, NetEncode};
 use ferrumc_net_codec::net_types::prefixed_optional::PrefixedOptional;
 use ferrumc_net_codec::net_types::var_int::VarInt;
+use std::io::Write;
 
 #[derive(NetEncode, NetDecode, Clone, Debug, Default)]
 pub struct ItemData {
@@ -18,7 +19,7 @@ impl From<&ItemStack> for ItemData {
     }
 }
 
-#[derive(NetEncode, NetDecode, Clone, Debug, Default)]
+#[derive(NetEncode, NetDecode)]
 pub struct Slot {
     pub item: PrefixedOptional<ItemData>,
 }
@@ -32,6 +33,32 @@ impl Slot {
             None => Slot {
                 item: PrefixedOptional::None,
             },
+        }
+    }
+}
+
+impl Default for Slot {
+    fn default() -> Self {
+        Slot { item: PrefixedOptional::None }
+    }
+}
+
+impl std::fmt::Debug for Slot {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.item {
+            PrefixedOptional::Some(data) => f.debug_struct("Slot").field("item", data).finish(),
+            PrefixedOptional::None => f.debug_struct("Slot").field("item", &"None").finish(),
+        }
+    }
+}
+
+impl Clone for Slot {
+    fn clone(&self) -> Self {
+        match &self.item {
+            PrefixedOptional::Some(data) => {
+                Slot { item: PrefixedOptional::Some(data.clone()) }
+            }
+            PrefixedOptional::None => Slot { item: PrefixedOptional::None },
         }
     }
 }

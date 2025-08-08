@@ -384,6 +384,9 @@
       },
       "minecraft:sound": {
         "protocol_id": 110
+      },
+      "minecraft:chat_message": {
+        "protocol_id": 111
       }
     },
     "serverbound": {
@@ -410,6 +413,9 @@
       },
       "minecraft:chat": {
         "protocol_id": 7
+      },
+      "minecraft:chat_message": {
+        "protocol_id": 111
       },
       "minecraft:chat_session_update": {
         "protocol_id": 8

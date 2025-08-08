@@ -7,6 +7,8 @@ mod player_count_update;
 pub mod send_chunks;
 pub mod shutdown_systems;
 mod world_sync;
+mod ai;
+mod physics;
 
 pub fn register_game_systems(schedule: &mut bevy_ecs::schedule::Schedule) {
     schedule.add_systems(keep_alive_system::keep_alive_system);
@@ -14,6 +16,8 @@ pub fn register_game_systems(schedule: &mut bevy_ecs::schedule::Schedule) {
     schedule.add_systems(cross_chunk_boundary::cross_chunk_boundary);
     schedule.add_systems(player_count_update::player_count_updater);
     schedule.add_systems(world_sync::sync_world);
+    schedule.add_systems(ai::update_ai);
+    schedule.add_systems(physics::update_physics);
 
     // Should always be last
     schedule.add_systems(connection_killer::connection_killer);

@@ -26,4 +26,5 @@ pub mod client_tick_end;
 pub mod confirm_player_teleport;
 pub mod player_input;
 
+pub mod block_entity_tag_query;
 pub mod player_loaded;

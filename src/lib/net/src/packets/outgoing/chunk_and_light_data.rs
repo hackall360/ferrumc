@@ -1,17 +1,17 @@
 use crate::errors::NetError;
 use byteorder::{BigEndian, WriteBytesExt};
-use ferrumc_macros::{NetEncode, packet};
+use ferrumc_macros::{packet, NetEncode};
 use ferrumc_net_codec::net_types::bitset::BitSet;
 use ferrumc_net_codec::net_types::byte_array::ByteArray;
 use ferrumc_net_codec::net_types::length_prefixed_vec::LengthPrefixedVec;
 use ferrumc_net_codec::net_types::var_int::VarInt;
-use ferrumc_world::chunk_format::{Chunk, PaletteType};
+use ferrumc_world::chunk_format::{BlockEntity as WorldBlockEntity, Chunk, PaletteType};
 use std::io::{Cursor, Write};
 use std::ops::Not;
 use tracing::warn;
 
 const SECTIONS: usize = 24; // Number of sections, adjust for your Y range (-64 to 319)
-// Heightmap identifiers as defined by the protocol
+                            // Heightmap identifiers as defined by the protocol
 const HEIGHTMAP_MOTION_BLOCKING: i32 = 4;
 const HEIGHTMAP_WORLD_SURFACE: i32 = 1;
 
@@ -197,12 +197,23 @@ impl ChunkAndLightData {
             },
         ];
 
+        let block_entities: Vec<BlockEntity> = chunk
+            .block_entities
+            .iter()
+            .map(|be: &WorldBlockEntity| BlockEntity {
+                xz: be.xz,
+                y: be.y,
+                entity_type: be.entity_type,
+                nbt: be.nbt.clone(),
+            })
+            .collect();
+
         Ok(ChunkAndLightData {
             chunk_x: chunk.x,
             chunk_z: chunk.z,
             heightmaps: LengthPrefixedVec::new(heightmaps),
             data: ByteArray::new(raw_data.into_inner()),
-            block_entities: LengthPrefixedVec::new(Vec::new()),
+            block_entities: LengthPrefixedVec::new(block_entities),
             sky_light_mask,
             block_light_mask,
             empty_sky_light_mask,

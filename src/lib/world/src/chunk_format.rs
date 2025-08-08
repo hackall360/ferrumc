@@ -236,7 +236,7 @@ impl VanillaChunk {
             } else if !raw_biome_data.is_empty() {
                 raw_biome_data
             } else {
-                let longs = ((64 * bits_per_biome as usize) + 63) / 64;
+                let longs = (64 * bits_per_biome as usize).div_ceil(64);
                 vec![0; longs]
             };
             let biome_states = BiomeStates {

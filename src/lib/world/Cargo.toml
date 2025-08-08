@@ -38,3 +38,6 @@ path = "src/benches/world.rs"
 
 [dev-dependencies]
 criterion = { workspace = true }
+
+[build-dependencies]
+base64 = { workspace = true }

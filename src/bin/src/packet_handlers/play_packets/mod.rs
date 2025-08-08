@@ -7,6 +7,8 @@ mod keep_alive;
 mod place_block;
 mod player_action;
 mod player_command;
+mod container_slot_state_changed;
+mod container_close;
 mod player_loaded;
 mod set_player_position;
 mod set_player_position_and_rotation;
@@ -22,6 +24,8 @@ pub fn register_packet_handlers(schedule: &mut Schedule) {
     schedule.add_systems(place_block::handle);
     schedule.add_systems(player_action::handle);
     schedule.add_systems(player_command::handle);
+    schedule.add_systems(container_slot_state_changed::handle);
+    schedule.add_systems(container_close::handle);
     schedule.add_systems(chat_message::broadcast_chat_messages);
     schedule.add_systems(set_player_position::handle);
     schedule.add_systems(set_player_position_and_rotation::handle);

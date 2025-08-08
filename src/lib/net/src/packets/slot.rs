@@ -2,11 +2,13 @@ use ferrumc_core::inventory::ItemStack;
 use ferrumc_macros::{NetDecode, NetEncode};
 use ferrumc_net_codec::net_types::prefixed_optional::PrefixedOptional;
 use ferrumc_net_codec::net_types::var_int::VarInt;
+use std::io::Write;
 
 #[derive(NetEncode, NetDecode, Clone, Debug, Default)]
 pub struct ItemData {
     pub item_id: VarInt,
     pub count: u8,
+    pub nbt: Vec<u8>,
 }
 
 impl From<&ItemStack> for ItemData {
@@ -14,13 +16,22 @@ impl From<&ItemStack> for ItemData {
         Self {
             item_id: VarInt::new(stack.item.0 as i32),
             count: stack.count,
+            nbt: stack.nbt.clone().unwrap_or_default(),
         }
     }
 }
 
-#[derive(NetEncode, NetDecode, Clone, Debug, Default)]
+#[derive(NetEncode, NetDecode)]
 pub struct Slot {
     pub item: PrefixedOptional<ItemData>,
+}
+
+impl Default for Slot {
+    fn default() -> Self {
+        Self {
+            item: PrefixedOptional::None,
+        }
+    }
 }
 
 impl Slot {

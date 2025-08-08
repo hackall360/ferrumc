@@ -1,6 +1,7 @@
 use crate::packets::slot::Slot;
 use ferrumc_core::inventory::ItemStack;
 use ferrumc_macros::{NetEncode, packet};
+use std::io::Write;
 
 #[derive(NetEncode)]
 #[packet(packet_id = "container_set_slot", state = "play")]

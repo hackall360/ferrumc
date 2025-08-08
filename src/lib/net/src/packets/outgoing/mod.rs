@@ -14,12 +14,12 @@ pub mod login_encryption_request;
 pub mod login_play;
 pub mod login_success;
 pub mod ping_response;
-pub mod transfer;
 pub mod set_center_chunk;
 pub mod set_default_spawn_position;
 pub mod set_render_distance;
 pub mod status_response;
 pub mod synchronize_player_position;
+pub mod transfer;
 
 pub mod remove_entities;
 pub mod spawn_entity;
@@ -38,5 +38,6 @@ pub mod update_entity_rotation;
 
 pub mod block_change_ack;
 
+pub mod block_entity_data;
 pub mod block_update;
 pub(crate) mod set_compression;

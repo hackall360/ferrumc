@@ -30,6 +30,7 @@ pub struct Chunk {
     pub dimension: String,
     pub sections: Vec<Section>,
     pub heightmaps: Heightmaps,
+    pub block_entities: Vec<BlockEntity>,
 }
 
 #[derive(Encode, Decode, NBTDeserialize, NBTSerialize, Clone, DeepSizeOf, Debug)]
@@ -75,6 +76,34 @@ pub struct BiomeStates {
     pub bits_per_biome: u8,
     pub data: Vec<i64>,
     pub palette: Vec<VarInt>,
+}
+
+#[derive(Encode, Decode, Clone, DeepSizeOf, Eq, PartialEq, Debug)]
+pub struct BlockEntity {
+    pub xz: u8,
+    pub y: u16,
+    pub entity_type: VarInt,
+    pub nbt: Vec<u8>,
+}
+
+impl BlockEntity {
+    pub fn new(x: u8, y: u16, z: u8, entity_type: VarInt, nbt: Vec<u8>) -> Self {
+        let xz = ((x & 0x0F) << 4) | (z & 0x0F);
+        BlockEntity {
+            xz,
+            y,
+            entity_type,
+            nbt,
+        }
+    }
+
+    pub fn x(&self) -> u8 {
+        self.xz >> 4
+    }
+
+    pub fn z(&self) -> u8 {
+        self.xz & 0x0F
+    }
 }
 
 fn convert_to_net_palette(vanilla_palettes: Vec<BlockData>) -> Result<Vec<VarInt>, WorldError> {
@@ -264,6 +293,7 @@ impl VanillaChunk {
             dimension,
             sections,
             heightmaps,
+            block_entities: Vec::new(),
         })
     }
 }
@@ -296,7 +326,33 @@ impl Chunk {
             dimension,
             sections,
             heightmaps: Heightmaps::new(),
+            block_entities: Vec::new(),
         }
+    }
+
+    pub fn set_block_entity(&mut self, x: u8, y: u16, z: u8, entity_type: VarInt, nbt: Vec<u8>) {
+        if let Some(existing) = self
+            .block_entities
+            .iter_mut()
+            .find(|be| be.x() == x && be.y == y && be.z() == z)
+        {
+            existing.entity_type = entity_type;
+            existing.nbt = nbt;
+        } else {
+            self.block_entities
+                .push(BlockEntity::new(x, y, z, entity_type, nbt));
+        }
+    }
+
+    pub fn get_block_entity(&self, x: u8, y: u16, z: u8) -> Option<&BlockEntity> {
+        self.block_entities
+            .iter()
+            .find(|be| be.x() == x && be.y == y && be.z() == z)
+    }
+
+    pub fn remove_block_entity(&mut self, x: u8, y: u16, z: u8) {
+        self.block_entities
+            .retain(|be| !(be.x() == x && be.y == y && be.z() == z));
     }
 }
 

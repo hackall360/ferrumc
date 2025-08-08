@@ -57,13 +57,33 @@ impl WorldGenerator {
         }
     }
 
-    fn get_biome(&self, _x: i32, _z: i32) -> Box<dyn BiomeGenerator> {
-        // Implement biome selection here
-        Box::new(biomes::plains::PlainsBiome)
+    fn get_biome(&self, x: i32, z: i32) -> Box<dyn BiomeGenerator> {
+        let id = self.biome_at(x, z);
+        biomes::get_biome_by_id(id)
+    }
+
+    pub fn biome_at(&self, x: i32, z: i32) -> u8 {
+        let noise = self.noise_generator.get_noise(x as f64, z as f64);
+        let count = biomes::biome_count() as f64;
+        let mut idx = ((noise + 1.0) / 2.0 * count).floor() as usize;
+        if idx >= count as usize {
+            idx = count as usize - 1;
+        }
+        idx as u8
+    }
+
+    pub fn generate_chunk_for_biome(
+        &self,
+        x: i32,
+        z: i32,
+        biome_id: u8,
+    ) -> Result<Chunk, WorldGenError> {
+        let biome = biomes::get_biome_by_id(biome_id);
+        biome.generate_chunk(x, z, &self.noise_generator)
     }
 
     pub fn generate_chunk(&self, x: i32, z: i32) -> Result<Chunk, WorldGenError> {
-        let biome = self.get_biome(x, z);
-        biome.generate_chunk(x, z, &self.noise_generator)
+        let id = self.biome_at(x, z);
+        self.generate_chunk_for_biome(x, z, id)
     }
 }

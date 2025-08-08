@@ -56,11 +56,11 @@ pub fn handle(
                         Ok(chunk) => chunk,
                         Err(e) => {
                             trace!("Chunk not found, generating new chunk: {:?}", e);
-                            state
-                                .0
-                                .clone()
-                                .terrain_generator
-                                .generate_chunk(event.location.x >> 4, event.location.z >> 4)?
+                            let gen = state.0.clone().terrain_generator;
+                            let bx = event.location.x >> 4;
+                            let bz = event.location.z >> 4;
+                            let biome = gen.biome_at(bx, bz);
+                            gen.generate_chunk_for_biome(bx, bz, biome)?
                         }
                     };
                     let (relative_x, relative_y, relative_z) = (

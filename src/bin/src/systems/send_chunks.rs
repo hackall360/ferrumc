@@ -58,9 +58,10 @@ pub fn send_chunks(
             } else {
                 trace!("Generating chunk {}x{} in dimension {}", x, z, dim);
                 // Don't bother saving the chunk if it hasn't been edited yet
+                let biome = state_clone.terrain_generator.biome_at(x, z);
                 let chunk = state_clone
                     .terrain_generator
-                    .generate_chunk(x, z)
+                    .generate_chunk_for_biome(x, z, biome)
                     .map_err(|err| NetError::Misc(err.to_string()))?;
                 Ok((ChunkAndLightData::from_chunk(&chunk), x, z))
             }?;

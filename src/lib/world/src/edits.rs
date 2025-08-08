@@ -1,12 +1,12 @@
-use crate::block_id::{BlockId, BLOCK2ID, ID2BLOCK};
-use crate::chunk_format::{BiomeStates, BlockStates, Chunk, PaletteType, Section};
+use crate::World;
+use crate::block_id::{BLOCK2ID, BlockId, ID2BLOCK};
+use crate::chunk_format::{BiomeStates, BlockEntity, BlockStates, Chunk, PaletteType, Section};
 use crate::errors::WorldError;
 use crate::vanilla_chunk_format::BlockData;
-use crate::World;
 use ferrumc_general_purpose::data_packing::i32::read_nbit_i32;
 use ferrumc_net_codec::net_types::var_int::VarInt;
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::sync::Arc;
 use tracing::{debug, error, warn};
 
@@ -571,6 +571,43 @@ impl Chunk {
                 Ok(BlockId(id))
             }
         }
+    }
+
+    pub fn set_block_entity(
+        &mut self,
+        x: u8,
+        y: i32,
+        z: u8,
+        entity_type: VarInt,
+        nbt: Vec<u8>,
+    ) {
+        if let Some(be) = self
+            .block_entities
+            .iter_mut()
+            .find(|be| be.x == x && be.y == y && be.z == z)
+        {
+            be.entity_type = entity_type;
+            be.nbt = nbt;
+        } else {
+            self.block_entities.push(BlockEntity {
+                x,
+                y,
+                z,
+                entity_type,
+                nbt,
+            });
+        }
+    }
+
+    pub fn get_block_entity(&self, x: u8, y: i32, z: u8) -> Option<&BlockEntity> {
+        self.block_entities
+            .iter()
+            .find(|be| be.x == x && be.y == y && be.z == z)
+    }
+
+    pub fn remove_block_entity(&mut self, x: u8, y: i32, z: u8) {
+        self.block_entities
+            .retain(|be| be.x != x || be.y != y || be.z != z);
     }
 
     /// Sets the section at the specified index to the specified block data.

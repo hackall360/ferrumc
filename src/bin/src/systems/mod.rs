@@ -4,6 +4,7 @@ mod cross_chunk_boundary;
 mod keep_alive_system;
 pub mod new_connections;
 mod player_count_update;
+mod redstone_update_scheduler;
 pub mod send_chunks;
 pub mod shutdown_systems;
 mod world_sync;
@@ -14,6 +15,7 @@ pub fn register_game_systems(schedule: &mut bevy_ecs::schedule::Schedule) {
     schedule.add_systems(cross_chunk_boundary::cross_chunk_boundary);
     schedule.add_systems(player_count_update::player_count_updater);
     schedule.add_systems(world_sync::sync_world);
+    schedule.add_systems(redstone_update_scheduler::tick);
 
     // Should always be last
     schedule.add_systems(connection_killer::connection_killer);

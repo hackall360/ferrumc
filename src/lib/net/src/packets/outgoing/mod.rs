@@ -1,3 +1,4 @@
+pub mod block_entity_data;
 pub mod chat_message;
 pub mod chunk_and_light_data;
 pub mod chunk_batch_finish;

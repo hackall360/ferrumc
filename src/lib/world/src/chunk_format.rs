@@ -1,5 +1,5 @@
 use crate::biome_id::get_biome_id;
-use crate::block_id::{BlockId, BLOCK2ID};
+use crate::block_id::{BLOCK2ID, BlockId};
 use crate::vanilla_chunk_format;
 use crate::vanilla_chunk_format::VanillaChunk;
 use crate::{errors::WorldError, vanilla_chunk_format::VanillaHeightmaps};
@@ -30,6 +30,7 @@ pub struct Chunk {
     pub dimension: String,
     pub sections: Vec<Section>,
     pub heightmaps: Heightmaps,
+    pub block_entities: Vec<BlockEntity>,
 }
 
 #[derive(Encode, Decode, NBTDeserialize, NBTSerialize, Clone, DeepSizeOf, Debug)]
@@ -75,6 +76,15 @@ pub struct BiomeStates {
     pub bits_per_biome: u8,
     pub data: Vec<i64>,
     pub palette: Vec<VarInt>,
+}
+
+#[derive(Encode, Decode, Clone, DeepSizeOf, Eq, PartialEq, Debug)]
+pub struct BlockEntity {
+    pub x: u8,
+    pub y: i32,
+    pub z: u8,
+    pub entity_type: VarInt,
+    pub nbt: Vec<u8>,
 }
 
 fn convert_to_net_palette(vanilla_palettes: Vec<BlockData>) -> Result<Vec<VarInt>, WorldError> {
@@ -264,6 +274,7 @@ impl VanillaChunk {
             dimension,
             sections,
             heightmaps,
+            block_entities: Vec::new(),
         })
     }
 }
@@ -296,6 +307,7 @@ impl Chunk {
             dimension,
             sections,
             heightmaps: Heightmaps::new(),
+            block_entities: Vec::new(),
         }
     }
 }
@@ -330,6 +342,21 @@ mod tests {
                 assert_eq!(count, &4096);
             }
         }
+    }
+
+    #[test]
+    fn test_block_entity_storage() {
+        let mut chunk = Chunk::new(0, 0, "overworld".to_string());
+        let nbt = vec![1, 2, 3];
+        chunk.set_block_entity(1, 64, 1, VarInt::from(1), nbt.clone());
+        let be = chunk.get_block_entity(1, 64, 1).unwrap();
+        assert_eq!(be.entity_type, VarInt::from(1));
+        assert_eq!(be.nbt, nbt);
+        let encoded = bitcode::encode(&chunk);
+        let decoded: Chunk = bitcode::decode(&encoded).unwrap();
+        let be2 = decoded.get_block_entity(1, 64, 1).unwrap();
+        assert_eq!(be2.entity_type, VarInt::from(1));
+        assert_eq!(be2.nbt, vec![1, 2, 3]);
     }
 
     #[test]

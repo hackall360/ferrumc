@@ -1,5 +1,6 @@
 use crate::commands::{CommandDispatcher, SayCommand};
 use crate::systems::new_connections::NewConnectionRecv;
+use crate::systems::redstone_update_scheduler::RedstoneUpdateQueue;
 use bevy_ecs::prelude::World;
 use crossbeam_channel::Receiver;
 use ferrumc_core::chunks::world_sync_tracker::WorldSyncTracker;
@@ -20,6 +21,7 @@ pub fn register_resources(
     world.insert_resource(WorldSyncTracker {
         last_synced: std::time::Instant::now(),
     });
+    world.insert_resource(RedstoneUpdateQueue::default());
 
     let mut dispatcher = CommandDispatcher::new();
     dispatcher.register("say", SayCommand);

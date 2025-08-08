@@ -197,12 +197,23 @@ impl ChunkAndLightData {
             },
         ];
 
+        let block_entities = chunk
+            .block_entities
+            .iter()
+            .map(|be| BlockEntity {
+                xz: ((be.x & 0x0F) << 4) | (be.z & 0x0F),
+                y: be.y as u16,
+                entity_type: be.entity_type,
+                nbt: be.nbt.clone(),
+            })
+            .collect();
+
         Ok(ChunkAndLightData {
             chunk_x: chunk.x,
             chunk_z: chunk.z,
             heightmaps: LengthPrefixedVec::new(heightmaps),
             data: ByteArray::new(raw_data.into_inner()),
-            block_entities: LengthPrefixedVec::new(Vec::new()),
+            block_entities: LengthPrefixedVec::new(block_entities),
             sky_light_mask,
             block_light_mask,
             empty_sky_light_mask,

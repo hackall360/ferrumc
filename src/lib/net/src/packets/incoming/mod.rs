@@ -5,6 +5,7 @@ pub mod login_start;
 pub mod ping;
 pub mod status_request;
 
+pub mod block_entity_tag_query;
 pub mod chat_message;
 pub mod container_close;
 pub mod container_slot_state_changed;

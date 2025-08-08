@@ -99,6 +99,10 @@ impl BiomeGenerator for PlainsBiome {
     }
 }
 
+pub(crate) fn new() -> Box<dyn BiomeGenerator> {
+    Box::new(PlainsBiome)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

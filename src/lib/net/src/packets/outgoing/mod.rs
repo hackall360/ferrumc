@@ -14,6 +14,7 @@ pub mod login_encryption_request;
 pub mod login_play;
 pub mod login_success;
 pub mod ping_response;
+pub mod transfer;
 pub mod set_center_chunk;
 pub mod set_default_spawn_position;
 pub mod set_render_distance;

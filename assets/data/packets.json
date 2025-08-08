@@ -4,7 +4,11 @@
     "serverbound": {}
   },
   "handshake": {
-    "clientbound": {},
+    "clientbound": {
+      "minecraft:transfer": {
+        "protocol_id": 0
+      }
+    },
     "serverbound": {
       "minecraft:intention": {
         "protocol_id": 0

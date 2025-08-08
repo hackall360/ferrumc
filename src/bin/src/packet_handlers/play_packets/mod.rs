@@ -12,6 +12,8 @@ mod set_player_position;
 mod set_player_position_and_rotation;
 mod set_player_rotation;
 mod swing_arm;
+mod spawn_entity;
+mod despawn_entity;
 
 pub fn register_packet_handlers(schedule: &mut Schedule) {
     // Added separately so if we mess up the signature of one of the systems we can know exactly
@@ -28,4 +30,6 @@ pub fn register_packet_handlers(schedule: &mut Schedule) {
     schedule.add_systems(set_player_rotation::handle);
     schedule.add_systems(swing_arm::handle);
     schedule.add_systems(player_loaded::handle);
+    schedule.add_systems(spawn_entity::handle);
+    schedule.add_systems(despawn_entity::handle);
 }

@@ -8,3 +8,6 @@ pub mod identity;
 pub mod inventory;
 pub mod state;
 pub mod transform;
+pub mod health;
+pub mod ai;
+pub mod movement;

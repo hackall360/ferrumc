@@ -21,6 +21,7 @@ pub mod status_response;
 pub mod synchronize_player_position;
 pub mod transfer;
 
+pub mod add_entity;
 pub mod remove_entities;
 pub mod spawn_entity;
 

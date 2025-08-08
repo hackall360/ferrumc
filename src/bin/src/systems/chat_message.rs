@@ -10,13 +10,16 @@ use tracing::error;
 use crate::commands::{CommandContext, CommandDispatcher};
 
 /// Broadcasts a text component to all connected players.
-pub fn broadcast_text(
+pub fn broadcast_text<'a, I>(
     message: TextComponent,
-    query: &Query<(Entity, &StreamWriter)>,
+    targets: I,
     state: &GlobalStateResource,
-) {
+)
+where
+    I: IntoIterator<Item = (Entity, &'a StreamWriter)>,
+{
     let outgoing = OutgoingChatMessagePacket::new(message);
-    for (entity, conn) in query.iter() {
+    for (entity, conn) in targets.into_iter() {
         if !state.0.players.is_connected(entity) {
             continue;
         }
@@ -28,7 +31,13 @@ pub fn broadcast_text(
 
 pub fn broadcast_chat_messages(
     events: Res<IncomingChatMessagePacketReceiver>,
-    query: Query<(Entity, &StreamWriter)>,
+    mut query: Query<(
+        Entity,
+        &StreamWriter,
+        &mut ferrumc_core::transform::position::Position,
+        &mut ferrumc_core::inventory::Inventory,
+        &ferrumc_core::identity::player_identity::PlayerIdentity,
+    )>,
     state: Res<GlobalStateResource>,
     dispatcher: Res<CommandDispatcher>,
 ) {
@@ -37,13 +46,17 @@ pub fn broadcast_chat_messages(
             let line = packet.message.trim_start_matches('/');
             let ctx = CommandContext {
                 sender,
-                query: &query,
+                query: &mut query,
                 state: state.as_ref(),
             };
             dispatcher.dispatch(line, ctx);
         } else {
             let message = TextComponent::from(packet.message.clone());
-            broadcast_text(message, &query, state.as_ref());
+            broadcast_text(
+                message,
+                query.iter_mut().map(|(e, conn, _, _, _)| (e, conn)),
+                state.as_ref(),
+            );
         }
     }
 }

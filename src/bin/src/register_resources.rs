@@ -1,4 +1,6 @@
-use crate::commands::{CommandDispatcher, SayCommand};
+use crate::commands::{
+    gamemode_command, give_command, say_command, tp_command, CommandDispatcher,
+};
 use crate::systems::new_connections::NewConnectionRecv;
 use bevy_ecs::prelude::World;
 use crossbeam_channel::Receiver;
@@ -22,6 +24,9 @@ pub fn register_resources(
     });
 
     let mut dispatcher = CommandDispatcher::new();
-    dispatcher.register("say", SayCommand);
+    dispatcher.register(say_command());
+    dispatcher.register(tp_command());
+    dispatcher.register(give_command());
+    dispatcher.register(gamemode_command());
     world.insert_resource(dispatcher);
 }

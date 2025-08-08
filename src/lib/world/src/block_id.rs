@@ -11,9 +11,9 @@ use tracing::error;
 
 // The number of block entries in the mappings file
 // Go to the .etc/blockstates.json file, see what the last ID is, and add 1 to it.
-const BLOCK_ENTRIES: usize = 27914;
+const BLOCK_ENTRIES: usize = 24276;
 
-const BLOCKSFILE: &[u8] = include_bytes!("../../../../.etc/blockmappings.bz2");
+const BLOCKSFILE: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/blockmappings.bz2"));
 
 lazy_static! {
     pub static ref ID2BLOCK: Vec<BlockData> = {

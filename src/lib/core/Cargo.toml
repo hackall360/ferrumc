@@ -12,6 +12,7 @@ typename = { workspace = true }
 ferrumc-net-codec = { workspace = true }
 uuid = { workspace = true }
 ferrumc-world = { workspace = true }
+ferrumc-macros = { workspace = true }
 
 [dev-dependencies]
 criterion = { workspace = true }

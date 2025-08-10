@@ -105,22 +105,22 @@ fn update_pos_for_all(
 
     let packet: BroadcastMovementPacket = if delta_exceeds_threshold {
         BroadcastMovementPacket::TeleportEntity(TeleportEntityPacket::new(
-            identity, pos, rot, grounded.0,
+            identity.short_uuid, pos, rot, grounded.0,
         ))
     } else {
         match (delta_pos, new_rot) {
             (Some(delta_pos), Some(new_rot)) => {
                 BroadcastMovementPacket::UpdateEntityPositionAndRotation(
                     UpdateEntityPositionAndRotationPacket::new(
-                        identity, delta_pos, &new_rot, grounded.0,
+                        identity.short_uuid, delta_pos, &new_rot, grounded.0,
                     ),
                 )
             }
             (Some(delta_pos), None) => BroadcastMovementPacket::UpdateEntityPosition(
-                UpdateEntityPositionPacket::new(identity, delta_pos, grounded.0),
+                UpdateEntityPositionPacket::new(identity.short_uuid, delta_pos, grounded.0),
             ),
             (None, Some(new_rot)) => BroadcastMovementPacket::UpdateEntityRotation(
-                UpdateEntityRotationPacket::new(identity, &new_rot, grounded.0),
+                UpdateEntityRotationPacket::new(identity.short_uuid, &new_rot, grounded.0),
             ),
             _ => {
                 return Ok(());

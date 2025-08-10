@@ -1,4 +1,3 @@
-use ferrumc_core::identity::player_identity::PlayerIdentity;
 use ferrumc_core::transform::position::Position;
 use ferrumc_core::transform::rotation::Rotation;
 use ferrumc_macros::{NetEncode, packet};
@@ -21,21 +20,16 @@ pub struct TeleportEntityPacket {
 }
 
 impl TeleportEntityPacket {
-    pub fn new(
-        entity_id: &PlayerIdentity,
-        position: &Position,
-        angle: &Rotation,
-        on_ground: bool,
-    ) -> Self {
+    pub fn new(short_id: i32, position: &Position, angle: &Rotation, on_ground: bool) -> Self {
         // Todo: Add velocity parameters if needed
         Self {
-            entity_id: VarInt::new(entity_id.short_uuid),
+            entity_id: VarInt::new(short_id),
             x: position.x,
             y: position.y,
             z: position.z,
-            vel_x: 0.0, // Placeholder for velocity in x direction
-            vel_y: 0.0, // Placeholder for velocity in y direction
-            vel_z: 0.0, // Placeholder for velocity in z direction
+            vel_x: 0.0,
+            vel_y: 0.0,
+            vel_z: 0.0,
             yaw: angle.yaw,
             pitch: angle.pitch,
             on_ground,

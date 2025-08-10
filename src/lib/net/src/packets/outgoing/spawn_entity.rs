@@ -1,7 +1,8 @@
 use crate::errors::NetError;
 
 use bevy_ecs::prelude::{Entity, Query};
-use ferrumc_core::identity::player_identity::PlayerIdentity;
+use ferrumc_core::ai::EntityKind;
+use ferrumc_core::identity::{player_identity::PlayerIdentity, entity_id::EntityId};
 use ferrumc_core::transform::position::Position;
 use ferrumc_core::transform::rotation::Rotation;
 use ferrumc_macros::{NetEncode, get_registry_entry, packet};
@@ -29,11 +30,11 @@ pub struct SpawnEntityPacket {
 
 const PLAYER_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:player");
 
-impl SpawnEntityPacket {
-    pub fn player(
-        entity_id: Entity,
-        query: Query<(&PlayerIdentity, &Position, &Rotation)>,
-    ) -> Result<Self, NetError> {
+    impl SpawnEntityPacket {
+        pub fn player(
+            entity_id: Entity,
+            query: Query<(&PlayerIdentity, &Position, &Rotation)>,
+        ) -> Result<Self, NetError> {
         let (player_identity, position, rotation) = query.get(entity_id).unwrap_or_else(|_| {
             panic!(
                 "Failed to get player identity, position, and rotation for entity ID: {entity_id:?}"
@@ -55,5 +56,28 @@ impl SpawnEntityPacket {
             velocity_y: 0,
             velocity_z: 0,
         })
+        }
+
+        pub fn mob(
+            entity_id: &EntityId,
+            mob: EntityKind,
+            position: &Position,
+            rotation: &Rotation,
+        ) -> Self {
+            Self {
+                entity_id: VarInt::new(entity_id.short_uuid),
+                entity_uuid: entity_id.uuid.as_u128(),
+                r#type: VarInt::new(mob.network_id()),
+                x: position.x,
+                y: position.y,
+                z: position.z,
+                pitch: NetAngle::from_degrees(rotation.pitch as f64),
+                yaw: NetAngle::from_degrees(rotation.yaw as f64),
+                head_yaw: NetAngle::from_degrees(rotation.yaw as f64),
+                data: VarInt::new(0),
+                velocity_x: 0,
+                velocity_y: 0,
+                velocity_z: 0,
+            }
+        }
     }
-}

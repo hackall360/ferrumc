@@ -17,6 +17,8 @@ mod set_player_position_and_rotation;
 mod set_player_rotation;
 mod swing_arm;
 mod spawn_entity;
+mod spawn_mob;
+mod update_mob_position;
 mod despawn_entity;
 
 pub fn register_packet_handlers(schedule: &mut Schedule) {
@@ -37,7 +39,9 @@ pub fn register_packet_handlers(schedule: &mut Schedule) {
     schedule.add_systems(set_player_position_and_rotation::handle);
     schedule.add_systems(set_player_rotation::handle);
     schedule.add_systems(swing_arm::handle);
-    schedule.add_systems(player_loaded::handle);
-    schedule.add_systems(spawn_entity::handle);
-    schedule.add_systems(despawn_entity::handle);
-}
+      schedule.add_systems(player_loaded::handle);
+      schedule.add_systems(spawn_entity::handle);
+      schedule.add_systems(spawn_mob::handle);
+      schedule.add_systems(update_mob_position::handle);
+      schedule.add_systems(despawn_entity::handle);
+  }

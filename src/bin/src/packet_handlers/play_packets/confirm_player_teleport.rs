@@ -42,7 +42,7 @@ pub fn handle(
             on_ground.0 = false;
             commands.entity(eid).remove::<PendingTeleport>();
 
-            let packet = TeleportEntityPacket::new(identity, &pos, rot, on_ground.0);
+            let packet = TeleportEntityPacket::new(identity.short_uuid, &pos, rot, on_ground.0);
             for (entity, conn) in conn_query.iter() {
                 if entity == eid || !state.0.players.is_connected(entity) {
                     continue;

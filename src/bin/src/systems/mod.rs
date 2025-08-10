@@ -17,8 +17,9 @@ pub fn register_game_systems(schedule: &mut bevy_ecs::schedule::Schedule) {
     schedule.add_systems(cross_chunk_boundary::cross_chunk_boundary);
     schedule.add_systems(player_count_update::player_count_updater);
     schedule.add_systems(world_sync::sync_world);
-    schedule.add_systems(ai::update_ai);
-    schedule.add_systems(physics::update_physics);
+      schedule.add_systems(ai::spawn_mobs);
+      schedule.add_systems(ai::update_ai);
+      schedule.add_systems(physics::update_physics);
     schedule.add_systems(redstone_update::run_redstone_updates);
 
     // Should always be last

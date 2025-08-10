@@ -1,4 +1,3 @@
-use ferrumc_core::identity::player_identity::PlayerIdentity;
 use ferrumc_core::transform::rotation::Rotation;
 use ferrumc_macros::{NetEncode, packet};
 use ferrumc_net_codec::net_types::angle::NetAngle;
@@ -14,9 +13,9 @@ pub struct UpdateEntityRotationPacket {
     pub on_ground: bool,
 }
 impl UpdateEntityRotationPacket {
-    pub fn new(entity_id: &PlayerIdentity, new_rot: &Rotation, on_ground: bool) -> Self {
+    pub fn new(short_id: i32, new_rot: &Rotation, on_ground: bool) -> Self {
         Self {
-            entity_id: VarInt::new(entity_id.short_uuid),
+            entity_id: VarInt::new(short_id),
             yaw: NetAngle::from_degrees(new_rot.yaw as f64),
             pitch: NetAngle::from_degrees(new_rot.pitch as f64),
             on_ground,

@@ -156,9 +156,13 @@ impl BiomeGenerator for SimpleBiome {
                         );
                     }
                 }
+                // Generates an oak tree wholly contained within this chunk.
+                //
+                // Trees near chunk borders are skipped so that both trunks and
+                // leaves remain within the local `0..15` coordinate range,
+                // preventing writes to adjacent chunks.
                 Veg::OakTree => {
                     if rng.random::<f32>() < 0.05 {
-                        // Skip trees near chunk edges so leaves stay within the 0..15 range
                         if lx <= 1 || lx >= 14 || lz <= 1 || lz >= 14 {
                             continue;
                         }
@@ -196,9 +200,13 @@ impl BiomeGenerator for SimpleBiome {
                         }
                     }
                 }
+                // Generates a cactus confined to this chunk.
+                //
+                // Edge positions are skipped and height is capped so every
+                // cactus block lies within the chunk's `0..15` local range and
+                // never writes to neighboring chunks.
                 Veg::Cactus => {
                     if rng.random::<f32>() < 0.05 {
-                        // Skip cactus near chunk edges to avoid cross-chunk placement
                         if lx == 0 || lx == 15 || lz == 0 || lz == 15 {
                             continue;
                         }

@@ -131,7 +131,11 @@ impl BiomeGenerator for SimpleBiome {
                         block.clone(),
                     );
                 }
-                tops.push((global_x as i32 & 0xF, height + above_filled_sections, global_z as i32 & 0xF));
+                tops.push((
+                    global_x as i32 & 0xF,
+                    height + above_filled_sections,
+                    global_z as i32 & 0xF,
+                ));
             }
         }
 
@@ -154,6 +158,10 @@ impl BiomeGenerator for SimpleBiome {
                 }
                 Veg::OakTree => {
                     if rng.random::<f32>() < 0.05 {
+                        // Skip trees near chunk edges so leaves stay within the 0..15 range
+                        if lx <= 1 || lx >= 14 || lz <= 1 || lz >= 14 {
+                            continue;
+                        }
                         for dy in 1..4 {
                             batch.set_block(
                                 lx,
@@ -167,10 +175,15 @@ impl BiomeGenerator for SimpleBiome {
                         }
                         for dx in -1..=1 {
                             for dz in -1..=1 {
+                                let nx = lx + dx;
+                                let nz = lz + dz;
+                                if !(0..=15).contains(&nx) || !(0..=15).contains(&nz) {
+                                    continue;
+                                }
                                 batch.set_block(
-                                    lx + dx,
+                                    nx,
                                     top_y + 3,
-                                    lz + dz,
+                                    nz,
                                     BlockData {
                                         name: "minecraft:oak_leaves".to_string(),
                                         properties: Some(BTreeMap::from([(
@@ -185,8 +198,15 @@ impl BiomeGenerator for SimpleBiome {
                 }
                 Veg::Cactus => {
                     if rng.random::<f32>() < 0.05 {
+                        // Skip cactus near chunk edges to avoid cross-chunk placement
+                        if lx == 0 || lx == 15 || lz == 0 || lz == 15 {
+                            continue;
+                        }
                         let h = rng.random_range(1..=3);
                         for dy in 0..h {
+                            if top_y + dy >= 256 {
+                                break;
+                            }
                             batch.set_block(
                                 lx,
                                 top_y + dy,

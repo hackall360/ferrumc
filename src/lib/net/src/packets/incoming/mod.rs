@@ -13,6 +13,7 @@ pub mod packet_skeleton;
 
 pub mod place_block;
 pub mod player_command;
+pub mod custom_payload;
 pub mod set_player_position;
 pub mod set_player_position_and_rotation;
 pub mod set_player_rotation;

@@ -1,9 +1,13 @@
 mod biomes;
 pub mod errors;
+mod noise_settings;
+mod structures;
 
 use crate::errors::WorldGenError;
 use ferrumc_world::chunk_format::Chunk;
 use noise::{Clamp, NoiseFn, OpenSimplex};
+use noise_settings::{NoiseSettings, OVERWORLD_NOISE_SETTINGS};
+use structures::{temple::Temple, village::Village, StructurePlacer};
 
 /// Trait for generating a biome
 ///
@@ -21,22 +25,24 @@ pub(crate) trait BiomeGenerator {
 
 pub(crate) struct NoiseGenerator {
     pub(crate) layers: Vec<Clamp<f64, OpenSimplex, 2>>,
+    pub(crate) settings: NoiseSettings,
 }
 
 pub struct WorldGenerator {
     _seed: u64,
     noise_generator: NoiseGenerator,
+    structures: Vec<Box<dyn StructurePlacer + Send + Sync>>,
 }
 
 impl NoiseGenerator {
-    pub fn new(seed: u64) -> Self {
+    pub fn new(seed: u64, settings: NoiseSettings) -> Self {
         let mut layers = Vec::new();
         for i in 0..4 {
             let open_simplex = OpenSimplex::new((seed + i) as u32);
             let clamp = Clamp::new(open_simplex).set_bounds(-1.0, 1.0);
             layers.push(clamp);
         }
-        Self { layers }
+        Self { layers, settings }
     }
 
     pub fn get_noise(&self, x: f64, z: f64) -> f64 {
@@ -51,9 +57,13 @@ impl NoiseGenerator {
 
 impl WorldGenerator {
     pub fn new(seed: u64) -> Self {
+        let noise_generator = NoiseGenerator::new(seed, OVERWORLD_NOISE_SETTINGS);
+        let structures: Vec<Box<dyn StructurePlacer + Send + Sync>> =
+            vec![Box::new(Village), Box::new(Temple)];
         Self {
             _seed: seed,
-            noise_generator: NoiseGenerator::new(seed),
+            noise_generator,
+            structures,
         }
     }
 
@@ -82,8 +92,25 @@ impl WorldGenerator {
         biome.generate_chunk(x, z, &self.noise_generator)
     }
 
+    fn apply_surface(&self, _chunk: &mut Chunk) {}
+
+    fn apply_carvers(&self, _chunk: &mut Chunk) {}
+
+    fn apply_features(&self, _chunk: &mut Chunk) {}
+
+    fn apply_structures(&self, chunk: &mut Chunk) {
+        for s in &self.structures {
+            s.place(chunk);
+        }
+    }
+
     pub fn generate_chunk(&self, x: i32, z: i32) -> Result<Chunk, WorldGenError> {
         let id = self.biome_at(x, z);
-        self.generate_chunk_for_biome(x, z, id)
+        let mut chunk = self.generate_chunk_for_biome(x, z, id)?;
+        self.apply_surface(&mut chunk);
+        self.apply_carvers(&mut chunk);
+        self.apply_features(&mut chunk);
+        self.apply_structures(&mut chunk);
+        Ok(chunk)
     }
 }

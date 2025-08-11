@@ -11,3 +11,6 @@ rand = { workspace = true }
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+insta = "1"

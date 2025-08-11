@@ -8,3 +8,5 @@ pub struct NoiseSettings {
 }
 
 pub const OVERWORLD_NOISE_SETTINGS: NoiseSettings = NoiseSettings { scale: 64.0 };
+pub const NETHER_NOISE_SETTINGS: NoiseSettings = NoiseSettings { scale: 32.0 };
+pub const END_NOISE_SETTINGS: NoiseSettings = NoiseSettings { scale: 32.0 };

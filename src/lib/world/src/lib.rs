@@ -25,6 +25,35 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tracing::{error, trace, warn};
 
+pub const OVERWORLD_ID: i32 = 0;
+pub const NETHER_ID: i32 = -1;
+pub const END_ID: i32 = 1;
+
+pub fn dimension_id(name: &str) -> i32 {
+    match name {
+        "overworld" | "minecraft:overworld" => OVERWORLD_ID,
+        "nether" | "minecraft:the_nether" => NETHER_ID,
+        "end" | "minecraft:the_end" => END_ID,
+        _ => OVERWORLD_ID,
+    }
+}
+
+pub fn dimension_name(id: i32) -> &'static str {
+    match id {
+        NETHER_ID => "nether",
+        END_ID => "end",
+        _ => "overworld",
+    }
+}
+
+pub fn dimension_registry_name(id: i32) -> &'static str {
+    match id {
+        NETHER_ID => "minecraft:the_nether",
+        END_ID => "minecraft:the_end",
+        _ => "minecraft:overworld",
+    }
+}
+
 #[derive(Clone)]
 pub struct World {
     storage_backend: LmdbBackend,
@@ -65,6 +94,18 @@ fn check_config_validity() -> Result<(), WorldError> {
         return Err(WorldError::InvalidWorldPath(
             db_path.to_string_lossy().to_string(),
         ));
+    }
+
+    for dim in ["DIM-1", "DIM1"] {
+        let dim_path = db_path.join(dim);
+        if !dim_path.exists() {
+            if create_dir_all(&dim_path).is_err() {
+                error!("Could not create world path: {}", dim_path.display());
+                return Err(WorldError::InvalidWorldPath(
+                    dim_path.to_string_lossy().to_string(),
+                ));
+            }
+        }
     }
 
     // Check if doing map_size * 1024^3 would overflow usize. You probably don't need a database

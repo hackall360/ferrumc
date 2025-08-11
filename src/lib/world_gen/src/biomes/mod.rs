@@ -1,7 +1,7 @@
 use crate::BiomeGenerator;
 
 pub(crate) mod plains;
-mod simple;
+pub(crate) mod simple;
 use simple::{SimpleBiome, Veg};
 
 macro_rules! overworld_biome {

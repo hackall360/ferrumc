@@ -2,6 +2,8 @@ mod biomes;
 pub mod errors;
 mod noise_settings;
 mod structures;
+pub mod nether;
+pub mod end;
 
 use crate::errors::WorldGenError;
 use ferrumc_world::chunk_format::Chunk;

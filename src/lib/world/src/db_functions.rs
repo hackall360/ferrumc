@@ -3,11 +3,10 @@ use crate::errors::WorldError;
 use crate::errors::WorldError::CorruptedChunkData;
 // db_functions.rs
 use crate::warn;
-use crate::World;
+use crate::{dimension_id, World};
 use ferrumc_config::server_config::get_global_config;
 use ferrumc_nbt::{FromNbt, NBTSerializable};
 use ferrumc_net_codec::net_types::var_int::VarInt;
-use std::hash::Hasher;
 use std::sync::Arc;
 use tracing::trace;
 use yazi::CompressionLevel;
@@ -282,16 +281,9 @@ pub(crate) fn sync_internal(world: &World) -> Result<(), WorldError> {
 
 fn create_key(dimension: &str, x: i32, z: i32) -> u128 {
     let mut key = 0u128;
-    let mut hasher = wyhash::WyHash::with_seed(0);
-    hasher.write(dimension.as_bytes());
-    hasher.write_u8(0xFF);
-    let dim_hash = hasher.finish();
-    // Insert the dimension hash into the key as the first 32 bits
-    key |= (dim_hash as u128) << 96;
-    // Convert the x coordinate to a 48 bit integer and insert it into the key
+    let dim_id = dimension_id(dimension) as i64 as u128;
+    key |= (dim_id & 0xFFFF_FFFF) << 96;
     key |= ((x as u128) & 0x0000_0000_FFFF_FFFF) << 48;
-    // Convert the z coordinate to a 48 bit integer and insert it into the key
     key |= (z as u128) & 0x0000_0000_FFFF_FFFF;
-
     key
 }

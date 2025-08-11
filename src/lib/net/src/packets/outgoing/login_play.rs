@@ -33,20 +33,25 @@ pub struct LoginPlayPacket<'a> {
 }
 
 impl<'a> LoginPlayPacket<'a> {
-    pub fn new(conn_id: i32, dimension: &'a str, death: Option<GlobalPos<'a>>) -> Self {
+    pub fn new(conn_id: i32, dimension_id: i32, death: Option<GlobalPos<'a>>) -> Self {
+        let dimension_name = match dimension_id {
+            -1 => "minecraft:the_nether",
+            1 => "minecraft:the_end",
+            _ => "minecraft:overworld",
+        };
         Self {
             entity_id: conn_id,
             is_hardcore: false,
-            dimension_length: VarInt::from(1),
-            dimension_names: &["minecraft:overworld"],
+            dimension_length: VarInt::from(3),
+            dimension_names: &["minecraft:overworld", "minecraft:the_nether", "minecraft:the_end"],
             max_players: VarInt::from(get_global_config().max_players as i32),
             view_distance: VarInt::from(get_global_config().chunk_render_distance as i32),
             simulation_distance: VarInt::from(get_global_config().chunk_render_distance as i32),
             reduced_debug_info: false,
             enable_respawn_screen: true,
             do_limited_crafting: false,
-            dimension_type: VarInt::new(0),
-            dimension_name: dimension,
+            dimension_type: VarInt::new(dimension_id),
+            dimension_name,
             seed_hash: 0,
             gamemode: 1,
             previous_gamemode: -1,

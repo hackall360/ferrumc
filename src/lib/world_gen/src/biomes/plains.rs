@@ -110,14 +110,14 @@ mod test {
     #[test]
     fn test_is_ok() {
         let generator = PlainsBiome {};
-        let noise = NoiseGenerator::new(0);
+        let noise = NoiseGenerator::new(0, crate::noise_settings::OVERWORLD_NOISE_SETTINGS);
         assert!(generator.generate_chunk(0, 0, &noise).is_ok());
     }
 
     #[test]
     fn test_random_chunk_generation() {
         let generator = PlainsBiome {};
-        let noise = NoiseGenerator::new(0);
+        let noise = NoiseGenerator::new(0, crate::noise_settings::OVERWORLD_NOISE_SETTINGS);
         for _ in 0..100 {
             let x = rand::random::<i32>();
             let z = rand::random::<i32>();
@@ -128,17 +128,13 @@ mod test {
     #[test]
     fn test_very_high_coordinates() {
         let generator = PlainsBiome {};
-        let noise = NoiseGenerator::new(0);
-        assert!(
-            generator
-                .generate_chunk(1610612735, 1610612735, &noise)
-                .is_ok()
-        );
-        assert!(
-            generator
-                .generate_chunk(-1610612735, -1610612735, &noise)
-                .is_ok()
-        );
+        let noise = NoiseGenerator::new(0, crate::noise_settings::OVERWORLD_NOISE_SETTINGS);
+        assert!(generator
+            .generate_chunk(1610612735, 1610612735, &noise)
+            .is_ok());
+        assert!(generator
+            .generate_chunk(-1610612735, -1610612735, &noise)
+            .is_ok());
     }
 
     #[test]
@@ -146,7 +142,7 @@ mod test {
         for _ in 0..100 {
             let generator = PlainsBiome {};
             let seed = rand::random::<u64>();
-            let noise = NoiseGenerator::new(seed);
+            let noise = NoiseGenerator::new(seed, crate::noise_settings::OVERWORLD_NOISE_SETTINGS);
             assert!(generator.generate_chunk(0, 0, &noise).is_ok());
         }
     }

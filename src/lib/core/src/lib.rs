@@ -5,6 +5,7 @@ pub mod ai;
 pub mod chunks;
 pub mod collisions;
 pub mod conn;
+pub mod entities;
 pub mod furnace;
 pub mod health;
 pub mod identity;

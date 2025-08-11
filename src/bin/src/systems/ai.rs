@@ -1,33 +1,12 @@
-use bevy_ecs::prelude::{Commands, Query};
-use ferrumc_core::ai::{AIGoal, EntityKind, Mob, PendingSpawn};
-use ferrumc_core::collisions::bounds::CollisionBounds;
-use ferrumc_core::identity::entity_id::EntityId;
+use bevy_ecs::prelude::{Commands, Query, Res};
+use ferrumc_core::ai::{AIGoal, Mob};
 use ferrumc_core::movement::Movement;
-use ferrumc_core::transform::position::Position;
-use ferrumc_core::transform::rotation::Rotation;
+use ferrumc_core::state::spawn_entities_from_biomes;
+use ferrumc_state::GlobalStateResource;
 use rand::Rng;
 
-pub fn spawn_mobs(mut cmd: Commands, query: Query<&Mob>) {
-    if query.is_empty() {
-        let id = EntityId::new(rand::random::<u128>());
-        cmd.spawn((
-            id,
-            Mob { kind: EntityKind::Cow },
-            Position::default(),
-            Rotation::default(),
-            Movement::default(),
-            CollisionBounds {
-                x_offset_start: -0.3,
-                x_offset_end: 0.3,
-                y_offset_start: 0.0,
-                y_offset_end: 1.8,
-                z_offset_start: -0.3,
-                z_offset_end: 0.3,
-            },
-            AIGoal::Wander,
-            PendingSpawn,
-        ));
-    }
+pub fn spawn_mobs(cmd: Commands, state: Res<GlobalStateResource>, query: Query<&Mob>) {
+    spawn_entities_from_biomes(cmd, state, query);
 }
 
 pub fn update_ai(mut query: Query<(&AIGoal, &mut Movement)>) {

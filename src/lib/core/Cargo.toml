@@ -13,6 +13,7 @@ ferrumc-net-codec = { workspace = true }
 uuid = { workspace = true }
 ferrumc-world = { workspace = true }
 ferrumc-macros = { workspace = true }
+ferrumc-state = { workspace = true }
 
 [dev-dependencies]
 criterion = { workspace = true }

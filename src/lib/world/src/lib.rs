@@ -7,6 +7,7 @@ pub mod edits;
 pub mod errors;
 mod importing;
 pub mod vanilla_chunk_format;
+pub mod tick;
 
 use crate::chunk_format::Chunk;
 use crate::errors::WorldError;
@@ -14,11 +15,11 @@ use deepsize::DeepSizeOf;
 use ferrumc_config::server_config::get_global_config;
 use ferrumc_general_purpose::paths::get_root_path;
 use ferrumc_storage::lmdb::LmdbBackend;
-use moka::sync::Cache;
+use moka::{notification::RemovalCause, sync::Cache};
 use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
 use std::process::exit;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tracing::{error, trace, warn};
 
@@ -26,6 +27,7 @@ use tracing::{error, trace, warn};
 pub struct World {
     storage_backend: LmdbBackend,
     cache: Cache<(i32, i32, String), Arc<Chunk>>,
+    pub(crate) tick_manager: Arc<Mutex<tick::TickManager>>,
 }
 
 fn check_config_validity() -> Result<(), WorldError> {
@@ -99,9 +101,17 @@ impl World {
             exit(1);
         }
 
-        let eviction_listener = move |key, _, cause| {
-            trace!("Evicting key: {:?}, cause: {:?}", key, cause);
-        };
+        let tick_manager = Arc::new(Mutex::new(tick::TickManager::default()));
+        let tm_clone = Arc::clone(&tick_manager);
+        let eviction_listener =
+            move |key: Arc<(i32, i32, String)>, _: Arc<Chunk>, cause: RemovalCause| {
+                trace!("Evicting key: {:?}, cause: {:?}", key, cause);
+                let (cx, cz, dim) = &*key;
+                tm_clone
+                    .lock()
+                    .unwrap()
+                    .cleanup_chunk(*cx, *cz, dim);
+            };
 
         let cache = Cache::builder()
             .eviction_listener(eviction_listener)
@@ -113,7 +123,38 @@ impl World {
         World {
             storage_backend,
             cache,
+            tick_manager,
         }
+    }
+
+    /// Ticks the world, processing scheduled and random block updates.
+    pub fn tick(&self) -> Result<(), WorldError> {
+        self.tick_manager.lock().unwrap().tick_world(self)
+    }
+
+    /// Schedule a future tick for the block at the given position.
+    pub fn schedule_tick(
+        &self,
+        x: i32,
+        y: i32,
+        z: i32,
+        dimension: &str,
+        delay: u32,
+    ) {
+        tick::schedule_block_tick(self, x, y, z, dimension, delay);
+    }
+
+    /// Register a block position for random ticking.
+    pub fn schedule_random_tick(&self, x: i32, y: i32, z: i32, dimension: &str) {
+        tick::schedule_random_tick(self, x, y, z, dimension);
+    }
+
+    /// Remove all pending ticks associated with a dimension.
+    pub fn unload_dimension(&self, dimension: &str) {
+        self.tick_manager
+            .lock()
+            .unwrap()
+            .cleanup_dimension(dimension);
     }
 }
 

@@ -3,6 +3,7 @@ pub mod bitset;
 pub mod byte_array;
 pub mod length_prefixed_vec;
 pub mod network_position;
+pub mod global_pos;
 pub mod prefixed_optional;
 pub mod teleport_flags;
 pub mod var_int;

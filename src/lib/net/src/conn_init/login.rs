@@ -216,8 +216,11 @@ pub(super) async fn login<R: AsyncRead + Unpin>(
 
     // =============================================================================================
     // 6 Send login_play packet to switch to Play state
-    let login_play =
-        crate::packets::outgoing::login_play::LoginPlayPacket::new(player_identity.short_uuid);
+    let login_play = crate::packets::outgoing::login_play::LoginPlayPacket::new(
+        player_identity.short_uuid,
+        "minecraft:overworld",
+        None,
+    );
     conn_write.send_packet(login_play)?;
 
     // =============================================================================================

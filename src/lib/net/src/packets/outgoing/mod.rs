@@ -16,6 +16,7 @@ pub mod login_success;
 pub mod ping_response;
 pub mod set_center_chunk;
 pub mod set_default_spawn_position;
+pub mod custom_payload;
 pub mod set_render_distance;
 pub mod status_response;
 pub mod synchronize_player_position;

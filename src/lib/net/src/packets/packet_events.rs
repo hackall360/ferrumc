@@ -53,3 +53,10 @@ pub struct RecipeBookEvent {
 pub struct DisplayedRecipeEvent {
     pub recipe: String,
 }
+
+#[derive(Event, Debug)]
+pub struct PluginMessageEvent {
+    pub entity: Entity,
+    pub channel: String,
+    pub data: Vec<u8>,
+}

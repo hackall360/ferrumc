@@ -1,5 +1,6 @@
 use crate::block_id::BlockId;
 use crate::errors::WorldError;
+use crate::redstone::{self, Direction};
 use crate::World;
 use std::collections::{BTreeMap, HashMap, VecDeque};
 
@@ -89,6 +90,24 @@ fn tick_block(world: &World, tm: &mut TickManager, pos: &BlockPos, block: BlockI
         match data.name.as_str() {
             "minecraft:water" => water_tick(world, tm, pos)?,
             "minecraft:wheat" => crop_tick(world, pos, &data)?,
+            "minecraft:redstone_torch" | "minecraft:redstone_wall_torch" => {
+                redstone::tick_torch(world, tm, pos, block)?
+            }
+            "minecraft:repeater" => {
+                let delay = data
+                    .properties
+                    .as_ref()
+                    .and_then(|p| p.get("delay"))
+                    .and_then(|v| v.parse::<u8>().ok())
+                    .unwrap_or(1);
+                let facing = data
+                    .properties
+                    .as_ref()
+                    .and_then(|p| p.get("facing"))
+                    .and_then(|v| Direction::from_str(v))
+                    .unwrap_or(Direction::North);
+                redstone::tick_repeater(world, tm, pos, delay, facing, block)?
+            }
             _ => {}
         }
     }

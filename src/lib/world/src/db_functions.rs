@@ -5,6 +5,8 @@ use crate::errors::WorldError::CorruptedChunkData;
 use crate::warn;
 use crate::World;
 use ferrumc_config::server_config::get_global_config;
+use ferrumc_nbt::{FromNbt, NBTSerializable};
+use ferrumc_net_codec::net_types::var_int::VarInt;
 use std::hash::Hasher;
 use std::sync::Arc;
 use tracing::trace;
@@ -39,6 +41,35 @@ impl World {
 
     pub fn load_chunk_owned(&self, x: i32, z: i32, dimension: &str) -> Result<Chunk, WorldError> {
         self.load_chunk(x, z, dimension).map(|c| c.as_ref().clone())
+    }
+
+    /// Save a block entity at world coordinates.
+    pub fn save_block_entity<T: NBTSerializable>(
+        &self,
+        x: i32,
+        y: i32,
+        z: i32,
+        dimension: &str,
+        entity_type: VarInt,
+        data: &T,
+    ) -> Result<(), WorldError> {
+        let mut chunk = self.load_chunk_owned(x >> 4, z >> 4, dimension)?;
+        chunk.set_block_entity_data((x & 15) as u8, y as u16, (z & 15) as u8, entity_type, data);
+        self.save_chunk(Arc::new(chunk))
+    }
+
+    /// Load a block entity at world coordinates.
+    pub fn load_block_entity<T: for<'a> FromNbt<'a>>(
+        &self,
+        x: i32,
+        y: i32,
+        z: i32,
+        dimension: &str,
+    ) -> Result<T, WorldError> {
+        let chunk = self.load_chunk_owned(x >> 4, z >> 4, dimension)?;
+        chunk
+            .get_block_entity_data((x & 15) as u8, y as u16, (z & 15) as u8)
+            .ok_or(WorldError::BlockEntityNotFound)
     }
 
     /// Check if a chunk exists in the storage backend.

@@ -34,6 +34,8 @@ pub enum WorldError {
     BitcodeEncodeError(String),
     #[error("Chunk not found")]
     ChunkNotFound,
+    #[error("Block entity not found")]
+    BlockEntityNotFound,
     #[error("Anvil Decode Error: {0}")]
     AnvilDecodeError(AnvilError),
     #[error("Missing block mapping: {0}")]

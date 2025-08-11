@@ -3,6 +3,8 @@ use crate::chunk_format::{BiomeStates, BlockStates, Chunk, PaletteType, Section}
 use crate::errors::WorldError;
 use crate::vanilla_chunk_format::BlockData;
 use crate::World;
+use crate::redstone::{self, RedstoneComponent};
+use crate::tick;
 use ferrumc_general_purpose::data_packing::i32::read_nbit_i32;
 use ferrumc_net_codec::net_types::var_int::VarInt;
 use std::collections::hash_map::Entry;
@@ -87,6 +89,41 @@ impl World {
 
         // Save chunk
         self.save_chunk(Arc::new(chunk))?;
+
+        // handle redstone components
+        if let Some(comp) = redstone::identify_component(&block) {
+            match comp {
+                RedstoneComponent::Torch => {
+                    self.schedule_tick(x, y, z, dimension, 1);
+                }
+                RedstoneComponent::Repeater { delay, .. } => {
+                    self.schedule_tick(x, y, z, dimension, delay as u32);
+                }
+                RedstoneComponent::Wire => {}
+            }
+        }
+
+        // notify neighbors
+        let neighbors = [(1, 0, 0), (-1, 0, 0), (0, 0, 1), (0, 0, -1), (0, 1, 0), (0, -1, 0)];
+        for (dx, dy, dz) in neighbors {
+            if let Ok(nb) = self.get_block_and_fetch(x + dx, y + dy, z + dz, dimension) {
+                if let Some(comp) = redstone::identify_component(&nb) {
+                    let delay = match comp {
+                        RedstoneComponent::Torch => 1,
+                        RedstoneComponent::Repeater { delay, .. } => delay as u32,
+                        RedstoneComponent::Wire => 0,
+                    };
+                    if delay == 0 {
+                        let pos = tick::BlockPos { x: x + dx, y: y + dy, z: z + dz, dimension: dimension.to_string() };
+                        let mut cache = self.redstone_cache.lock().unwrap();
+                        redstone::propagate_from(self, &mut cache, pos, 15);
+                    } else {
+                        self.schedule_tick(x + dx, y + dy, z + dz, dimension, delay);
+                    }
+                }
+            }
+        }
+
         Ok(())
     }
 }

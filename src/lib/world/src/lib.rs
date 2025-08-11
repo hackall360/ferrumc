@@ -8,6 +8,7 @@ pub mod errors;
 mod importing;
 pub mod vanilla_chunk_format;
 pub mod tick;
+pub mod redstone;
 
 use crate::chunk_format::Chunk;
 use crate::errors::WorldError;
@@ -28,6 +29,7 @@ pub struct World {
     storage_backend: LmdbBackend,
     cache: Cache<(i32, i32, String), Arc<Chunk>>,
     pub(crate) tick_manager: Arc<Mutex<tick::TickManager>>,
+    pub(crate) redstone_cache: Arc<Mutex<redstone::PowerLevelCache>>,
 }
 
 fn check_config_validity() -> Result<(), WorldError> {
@@ -102,6 +104,7 @@ impl World {
         }
 
         let tick_manager = Arc::new(Mutex::new(tick::TickManager::default()));
+        let redstone_cache = Arc::new(Mutex::new(redstone::PowerLevelCache::default()));
         let tm_clone = Arc::clone(&tick_manager);
         let eviction_listener =
             move |key: Arc<(i32, i32, String)>, _: Arc<Chunk>, cause: RemovalCause| {
@@ -124,6 +127,7 @@ impl World {
             storage_backend,
             cache,
             tick_manager,
+            redstone_cache,
         }
     }
 
@@ -147,6 +151,15 @@ impl World {
     /// Register a block position for random ticking.
     pub fn schedule_random_tick(&self, x: i32, y: i32, z: i32, dimension: &str) {
         tick::schedule_random_tick(self, x, y, z, dimension);
+    }
+
+    /// Get cached redstone power level at position.
+    pub fn get_power_level(&self, x: i32, y: i32, z: i32, dimension: &str) -> u8 {
+        let cache = self.redstone_cache.lock().unwrap();
+        *cache
+            .levels
+            .get(&(x, y, z, dimension.to_string()))
+            .unwrap_or(&0)
     }
 
     /// Remove all pending ticks associated with a dimension.

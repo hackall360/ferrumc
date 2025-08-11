@@ -27,6 +27,9 @@ pub mod confirm_player_teleport;
 pub mod player_input;
 
 pub mod block_entity_tag_query;
-pub mod player_loaded;
 pub mod chat_ack;
 pub mod client_information;
+pub mod craft_recipe_request;
+pub mod displayed_recipe;
+pub mod player_loaded;
+pub mod recipe_book;

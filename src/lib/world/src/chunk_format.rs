@@ -7,6 +7,7 @@ use bitcode_derive::{Decode, Encode};
 use deepsize::DeepSizeOf;
 use ferrumc_general_purpose::data_packing::i32::read_nbit_i32;
 use ferrumc_macros::{NBTDeserialize, NBTSerialize};
+use ferrumc_nbt::{FromNbt, NBTSerializable, NBTSerializeOptions, NbtTape};
 use ferrumc_net_codec::net_types::var_int::VarInt;
 use std::cmp::max;
 use std::collections::HashMap;
@@ -342,6 +343,27 @@ impl Chunk {
             self.block_entities
                 .push(BlockEntity::new(x, y, z, entity_type, nbt));
         }
+    }
+
+    pub fn set_block_entity_data<T: NBTSerializable>(
+        &mut self,
+        x: u8,
+        y: u16,
+        z: u8,
+        entity_type: VarInt,
+        data: &T,
+    ) {
+        let mut buf = Vec::new();
+        data.serialize(&mut buf, &NBTSerializeOptions::WithHeader(""));
+        self.set_block_entity(x, y, z, entity_type, buf);
+    }
+
+    pub fn get_block_entity_data<T: for<'a> FromNbt<'a>>(&self, x: u8, y: u16, z: u8) -> Option<T> {
+        let be = self.get_block_entity(x, y, z)?;
+        let mut tape = NbtTape::new(&be.nbt);
+        tape.parse();
+        let (_, root) = tape.root.as_ref()?;
+        FromNbt::from_nbt(&tape, root).ok()
     }
 
     pub fn get_block_entity(&self, x: u8, y: u16, z: u8) -> Option<&BlockEntity> {

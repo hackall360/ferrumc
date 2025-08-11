@@ -1,4 +1,5 @@
 pub mod biome_id;
+pub mod block_entities;
 pub mod block_id;
 pub mod chunk_format;
 mod db_functions;
@@ -6,9 +7,9 @@ pub mod edit_batch;
 pub mod edits;
 pub mod errors;
 mod importing;
-pub mod vanilla_chunk_format;
-pub mod tick;
 pub mod redstone;
+pub mod tick;
+pub mod vanilla_chunk_format;
 
 use crate::chunk_format::Chunk;
 use crate::errors::WorldError;
@@ -110,10 +111,7 @@ impl World {
             move |key: Arc<(i32, i32, String)>, _: Arc<Chunk>, cause: RemovalCause| {
                 trace!("Evicting key: {:?}, cause: {:?}", key, cause);
                 let (cx, cz, dim) = &*key;
-                tm_clone
-                    .lock()
-                    .unwrap()
-                    .cleanup_chunk(*cx, *cz, dim);
+                tm_clone.lock().unwrap().cleanup_chunk(*cx, *cz, dim);
             };
 
         let cache = Cache::builder()
@@ -137,14 +135,7 @@ impl World {
     }
 
     /// Schedule a future tick for the block at the given position.
-    pub fn schedule_tick(
-        &self,
-        x: i32,
-        y: i32,
-        z: i32,
-        dimension: &str,
-        delay: u32,
-    ) {
+    pub fn schedule_tick(&self, x: i32, y: i32, z: i32, dimension: &str, delay: u32) {
         tick::schedule_block_tick(self, x, y, z, dimension, delay);
     }
 

@@ -15,4 +15,6 @@ pub mod identity;
 pub mod inventory;
 pub mod movement;
 pub mod state;
+pub mod progression;
+pub mod scoreboard;
 pub mod transform;

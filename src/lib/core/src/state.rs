@@ -1,6 +1,9 @@
 use bevy_ecs::prelude::{Commands, Query, Res};
 use ferrumc_state::GlobalStateResource;
+use ferrumc_storage::errors::StorageError;
+use ferrumc_storage::lmdb::LmdbBackend;
 use rand::Rng;
+use serde::{Deserialize, Serialize};
 use tracing::error;
 
 use crate::ai::{AIGoal, EntityKind, Mob, PendingSpawn};
@@ -13,6 +16,35 @@ use crate::transform::rotation::Rotation;
 use crate::furnace::{furnace_tick, Furnace};
 use crate::brewing::{brewing_tick, BrewingStand};
 use crate::inventory::Inventory;
+
+#[derive(Serialize, Deserialize, Default, Clone)]
+pub struct PlayerStats {
+    pub deaths: u32,
+    pub mobs_killed: u32,
+}
+
+pub fn load_player_stats(
+    db: &LmdbBackend,
+    uuid: u128,
+) -> Result<PlayerStats, StorageError> {
+    if let Some(bytes) = db.get("player_stats".to_string(), uuid)? {
+        serde_json::from_slice(&bytes)
+            .map_err(|e| StorageError::ReadError(e.to_string()))
+    } else {
+        Ok(PlayerStats::default())
+    }
+}
+
+pub fn save_player_stats(
+    db: &LmdbBackend,
+    uuid: u128,
+    stats: &PlayerStats,
+) -> Result<(), StorageError> {
+    let bytes =
+        serde_json::to_vec(stats).map_err(|e| StorageError::WriteError(e.to_string()))?;
+    db.upsert("player_stats".to_string(), uuid, bytes)?;
+    Ok(())
+}
 
 /// System that advances the world by one tick.
 pub fn tick_world(state: Res<GlobalStateResource>) {

@@ -6,7 +6,7 @@ use bitcode::{Decode, Encode};
 use std::io::{Read, Write};
 use tokio::io::{AsyncRead, AsyncWrite};
 
-#[derive(Encode, Decode)]
+#[derive(Encode, Decode, Clone, Debug)]
 pub enum PrefixedOptional<T> {
     None,
     Some(T),

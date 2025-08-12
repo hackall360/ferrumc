@@ -11,6 +11,7 @@ ferrumc-net = { workspace = true }
 ferrumc-config = { workspace = true }
 bevy_ecs = { workspace = true}
 ferrumc-core = { workspace = true }
+ferrumc-text = { workspace = true }
 flate2 = { workspace = true }
 tokio = { workspace = true }
 maplit = { workspace = true }

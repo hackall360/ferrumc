@@ -177,3 +177,14 @@ fn test_serialize_to_nbt() {
         bytes_to_readable_string(&cursor.get_ref()[cursor.position() as usize..])
     );
 }
+
+#[test]
+fn json_roundtrip_and_translation() {
+    let component = TextComponent::translate_key(
+        "chat.type.text",
+        vec![TextComponent::from("Alice"), TextComponent::from("Hello")],
+    );
+    let json = component.to_json();
+    let parsed = TextComponent::from_json(&json).unwrap();
+    assert_eq!(component, parsed);
+}

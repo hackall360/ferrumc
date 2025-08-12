@@ -10,12 +10,19 @@ bevy_ecs = { workspace = true }
 tracing = { workspace = true }
 typename = { workspace = true }
 ferrumc-net-codec = { workspace = true }
+ferrumc-text = { workspace = true }
 uuid = { workspace = true }
 ferrumc-world = { workspace = true }
 ferrumc-macros = { workspace = true }
 ferrumc-state = { workspace = true }
 rand = { workspace = true }
 once_cell = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+ferrumc-storage = { workspace = true }
+ferrumc-config = { workspace = true }
+flate2 = { workspace = true }
+tokio = { workspace = true }
 
 [dev-dependencies]
 criterion = { workspace = true }

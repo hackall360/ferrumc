@@ -56,7 +56,7 @@ pub fn handle(
                         Ok(chunk) => chunk,
                         Err(e) => {
                             trace!("Chunk not found, generating new chunk: {:?}", e);
-                            let gen = state.0.clone().terrain_generator;
+                    let gen = &state.0.terrain_generator;
                             let bx = event.location.x >> 4;
                             let bz = event.location.z >> 4;
                             let biome = gen.biome_at(bx, bz);
@@ -75,7 +75,7 @@ pub fn handle(
                         block_id: VarInt::from(BlockId::default()),
                     };
                     for (eid, conn) in query.iter() {
-                        if !state.0.players.is_connected(*eid) {
+                        if !state.0.players.is_connected(eid) {
                             continue;
                         }
                         conn.send_packet_ref(&block_update_packet)?;

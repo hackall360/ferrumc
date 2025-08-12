@@ -11,9 +11,7 @@ use std::convert::Infallible;
 use std::marker::PhantomData;
 
 use bevy_ecs::prelude::{Entity, Query, Resource};
-use brigadier_rs::{
-    float_64, integer_i32, literal, BuildExecute, CommandArgument, CommandParser, Then,
-};
+use brigadier_rs::{float_64, literal, BuildExecute, CommandArgument, Execute, Then};
 use ferrumc_core::{
     identity::player_identity::PlayerIdentity,
     inventory::{Inventory, ItemStack},
@@ -57,13 +55,16 @@ pub struct CommandContext<'a> {
     /// Global server state.
     pub state: *const GlobalStateResource,
     /// Lifetime marker.
-    _marker: PhantomData<&'a ()>,
+    pub _marker: PhantomData<&'a ()>,
 }
+
+unsafe impl<'a> Send for CommandContext<'a> {}
+unsafe impl<'a> Sync for CommandContext<'a> {}
 
 /// Dispatcher that routes parsed commands to their handlers.
 #[derive(Default, Resource)]
 pub struct CommandDispatcher {
-    commands: Vec<Box<dyn for<'a> CommandParser<CommandContext<'a>, ()> + Send + Sync + 'static>>,
+    commands: Vec<Box<dyn for<'a> Execute<CommandContext<'a>, ()> + Send + Sync + 'static>>,
 }
 
 impl CommandDispatcher {
@@ -77,7 +78,7 @@ impl CommandDispatcher {
     /// Registers a command parser.
     pub fn register(
         &mut self,
-        parser: impl for<'a> CommandParser<CommandContext<'a>, ()> + Send + Sync + 'static,
+        parser: impl for<'a> Execute<CommandContext<'a>, ()> + Send + Sync + 'static,
     ) {
         self.commands.push(Box::new(parser));
     }
@@ -106,43 +107,6 @@ fn send_feedback(ctx: CommandContext, msg: String) {
     }
 }
 
-/// Argument parser that consumes the next space-delimited word.
-pub struct WordArgument;
-
-impl<S> CommandArgument<S, String> for WordArgument {
-    fn parse<'a>(
-        &self,
-        _source: S,
-        input: &'a str,
-    ) -> IResult<&'a str, String, brigadier_rs::CommandError<'a>> {
-        let input = input.trim_start();
-        let mut end = 0;
-        for (idx, ch) in input.char_indices() {
-            if ch.is_whitespace() {
-                break;
-            }
-            end = idx + ch.len_utf8();
-        }
-        let (word, rest) = input.split_at(end);
-        Ok((rest, word.to_string()))
-    }
-}
-
-impl<S, E> Then<E> for WordArgument {
-    type Output = brigadier_rs::parsers::CommandThen<Self, E, String, S>;
-
-    fn then(self, executor: E) -> Self::Output {
-        brigadier_rs::parsers::CommandThen {
-            argument: self,
-            executor,
-        }
-    }
-}
-
-pub fn word() -> WordArgument {
-    WordArgument
-}
-
 /// Argument parser that consumes the remainder of the line.
 pub struct RestArgument;
 
@@ -157,25 +121,16 @@ impl<S> CommandArgument<S, String> for RestArgument {
     }
 }
 
-impl<S, E> Then<E> for RestArgument {
-    type Output = brigadier_rs::parsers::CommandThen<Self, E, String, S>;
-
-    fn then(self, executor: E) -> Self::Output {
-        brigadier_rs::parsers::CommandThen {
-            argument: self,
-            executor,
-        }
-    }
-}
+impl brigadier_rs::ArgumentMarkerDefaultImpl for RestArgument {}
 
 pub fn rest() -> RestArgument {
     RestArgument
 }
 
 /// `/say` command that broadcasts a message to all players.
-pub fn say_command() -> impl for<'a> CommandParser<CommandContext<'a>, ()> + Send + Sync {
+pub fn say_command() -> impl for<'a> Execute<CommandContext<'a>, ()> {
     literal("say")
-        .then(rest().build_exec(|ctx, msg: String| {
+        .then(rest().build_exec(|ctx: CommandContext, msg: String| {
             unsafe {
                 let query = &mut *ctx.query;
                 let state = &*ctx.state;
@@ -192,10 +147,10 @@ pub fn say_command() -> impl for<'a> CommandParser<CommandContext<'a>, ()> + Sen
 }
 
 /// `/tp <x> <y> <z>` command.
-pub fn tp_command() -> impl for<'a> CommandParser<CommandContext<'a>, ()> + Send + Sync {
+pub fn tp_command() -> impl for<'a> Execute<CommandContext<'a>, ()> {
     literal("tp")
         .then(
-            float_64("x").then(float_64("y").then(float_64("z").build_exec(|ctx, x, y, z| {
+            float_64("x").then(float_64("y").then(float_64("z").build_exec(|ctx: CommandContext, x, y, z| {
                 unsafe {
                     let query = &mut *ctx.query;
                     let state = &*ctx.state;
@@ -233,19 +188,24 @@ pub fn tp_command() -> impl for<'a> CommandParser<CommandContext<'a>, ()> + Send
         )
         .build_exec(|_ctx| Ok::<(), Infallible>(()))
 }
-
 /// `/give <item> [count]` command.
-pub fn give_command() -> impl for<'a> CommandParser<CommandContext<'a>, ()> + Send + Sync {
+pub fn give_command() -> impl for<'a> Execute<CommandContext<'a>, ()> {
     literal("give")
-        .then(
-            word()
-                .then(
-                    integer_i32("count").build_exec(|ctx, item: String, count: i32| {
-                        give_handler(ctx, item, count as u8)
-                    }),
-                )
-                .build_exec(|ctx, item: String| give_handler(ctx, item, 1)),
-        )
+        .then(rest().build_exec(|ctx: CommandContext, args: String| {
+            let mut parts = args.split_whitespace();
+            let item = match parts.next() {
+                Some(it) => it.to_string(),
+                None => {
+                    send_feedback(ctx, "Usage: /give <item> [count]".to_string());
+                    return Ok::<(), Infallible>(());
+                }
+            };
+            let count = parts
+                .next()
+                .and_then(|c| c.parse::<i32>().ok())
+                .unwrap_or(1);
+            give_handler(ctx, item, count as u8)
+        }))
         .build_exec(|_ctx| Ok::<(), Infallible>(()))
 }
 
@@ -282,9 +242,9 @@ fn give_handler(ctx: CommandContext, item: String, count: u8) -> Result<(), Infa
 }
 
 /// `/gamemode <mode>` command.
-pub fn gamemode_command() -> impl for<'a> CommandParser<CommandContext<'a>, ()> + Send + Sync {
+pub fn gamemode_command() -> impl for<'a> Execute<CommandContext<'a>, ()> {
     literal("gamemode")
-        .then(word().build_exec(|ctx, mode: String| {
+        .then(rest().build_exec(|ctx: CommandContext, mode: String| {
             unsafe {
                 let query = &mut *ctx.query;
                 let state = &*ctx.state;
@@ -330,8 +290,8 @@ pub fn gamemode_command() -> impl for<'a> CommandParser<CommandContext<'a>, ()> 
 }
 
 /// `/help` command listing available commands.
-pub fn help_command() -> impl for<'a> CommandParser<CommandContext<'a>, ()> + Send + Sync {
-    literal("help").build_exec(|ctx| {
+pub fn help_command() -> impl for<'a> Execute<CommandContext<'a>, ()> {
+    literal("help").build_exec(|ctx: CommandContext| {
         send_feedback(
             ctx,
             "Available commands: say, tp, give, gamemode, help".to_string(),

@@ -9,7 +9,7 @@ pub fn update_physics(
     let snapshot: Vec<(Entity, Position, CollisionBounds)> =
         query
             .iter()
-            .map(|(e, pos, _, bounds)| (e, pos.clone(), *bounds))
+            .map(|(e, pos, _, bounds)| (e, Position::new(pos.x, pos.y, pos.z), *bounds))
             .collect();
 
     for (entity, mut pos, movement, bounds) in query.iter_mut() {

@@ -1,7 +1,7 @@
-use bevy_ecs::prelude::ResMut;
+use bevy_ecs::prelude::{ResMut, Resource};
 use std::collections::VecDeque;
 
-#[derive(Default)]
+#[derive(Default, Resource)]
 pub struct RedstoneScheduler {
     pub queue: VecDeque<RedstoneUpdate>,
 }
@@ -13,6 +13,7 @@ pub struct RedstoneUpdate {
 }
 
 pub fn run_redstone_updates(mut scheduler: ResMut<RedstoneScheduler>) {
+    let scheduler = &mut *scheduler;
     let mut i = 0;
     while i < scheduler.queue.len() {
         if scheduler.queue[i].delay == 0 {

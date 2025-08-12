@@ -1,4 +1,5 @@
 use bevy_ecs::prelude::{Entity, Query, Res};
+use std::marker::PhantomData;
 use ferrumc_net::{
     connection::StreamWriter, packets::outgoing::chat_message::OutgoingChatMessagePacket,
     IncomingChatMessagePacketReceiver,
@@ -29,14 +30,14 @@ where
     }
 }
 
-pub fn broadcast_chat_messages(
+pub fn broadcast_chat_messages<'a>(
     events: Res<IncomingChatMessagePacketReceiver>,
-    mut query: Query<(
+    mut query: Query<'a, (
         Entity,
-        &StreamWriter,
-        &mut ferrumc_core::transform::position::Position,
-        &mut ferrumc_core::inventory::Inventory,
-        &ferrumc_core::identity::player_identity::PlayerIdentity,
+        &'a StreamWriter,
+        &'a mut ferrumc_core::transform::position::Position,
+        &'a mut ferrumc_core::inventory::Inventory,
+        &'a ferrumc_core::identity::player_identity::PlayerIdentity,
     )>,
     state: Res<GlobalStateResource>,
     dispatcher: Res<CommandDispatcher>,
@@ -48,6 +49,7 @@ pub fn broadcast_chat_messages(
                 sender,
                 query: &mut query,
                 state: state.as_ref(),
+                _marker: PhantomData,
             };
             dispatcher.dispatch(line, ctx);
         } else {

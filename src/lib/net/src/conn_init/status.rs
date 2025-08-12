@@ -97,6 +97,7 @@ pub(super) async fn status<R: AsyncRead + Unpin>(
         LoginResult {
             player_identity: None,
             compression: false,
+            player_data: None,
         },
     ))
 }

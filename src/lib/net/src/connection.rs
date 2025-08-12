@@ -17,6 +17,7 @@ use ferrumc_net_codec::encode::NetEncode;
 use ferrumc_net_codec::encode::NetEncodeOpts;
 use ferrumc_net_encryption::Aes128Cfb8Encryptor;
 use ferrumc_state::ServerState;
+use ferrumc_storage::player_data::PlayerData;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -225,6 +226,7 @@ impl StreamWriter {
 pub struct NewConnection {
     pub stream: StreamWriter,
     pub player_identity: PlayerIdentity,
+    pub player_data: PlayerData,
     pub entity_return: oneshot::Sender<Entity>,
 }
 
@@ -319,6 +321,7 @@ pub async fn handle_connection(
         .send(NewConnection {
             stream,
             player_identity: login_result.player_identity.unwrap_or_default(),
+            player_data: login_result.player_data.unwrap_or_default(),
             entity_return,
         })
         .map_err(|_| NetError::Misc("Failed to register new connection".to_string()))?;

@@ -39,6 +39,7 @@ reqwest = { workspace = true }
 sha1 = { workspace = true }
 aes = "0.8"
 cfb8 = "0.8"
+ferrumc-storage = { workspace = true }
 
 
 [dev-dependencies]

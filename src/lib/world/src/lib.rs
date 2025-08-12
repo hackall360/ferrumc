@@ -203,6 +203,10 @@ impl World {
             .unwrap()
             .cleanup_dimension(dimension);
     }
+
+    pub fn backend(&self) -> &LmdbBackend {
+        &self.storage_backend
+    }
 }
 
 #[cfg(test)]

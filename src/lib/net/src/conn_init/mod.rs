@@ -14,6 +14,7 @@ use ferrumc_macros::lookup_packet;
 use ferrumc_net_codec::decode::{NetDecode, NetDecodeOpts};
 use ferrumc_net_codec::net_types::var_int::VarInt;
 use ferrumc_state::GlobalState;
+use ferrumc_storage::player_data::PlayerData;
 use ferrumc_text::{ComponentBuilder, NamedColor, TextComponent};
 use std::sync::atomic::Ordering;
 use tokio::io::AsyncRead;
@@ -26,6 +27,7 @@ use tracing::{error, trace};
 pub(crate) struct LoginResult {
     pub player_identity: Option<PlayerIdentity>,
     pub compression: bool,
+    pub player_data: Option<PlayerData>,
 }
 
 /// Minecraft version targeted by this server implementation.

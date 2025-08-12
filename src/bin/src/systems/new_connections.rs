@@ -13,15 +13,25 @@ use tracing::{error, trace};
 #[derive(Resource)]
 pub struct NewConnectionRecv(pub Receiver<NewConnection>);
 
-pub fn accept_new_connections(mut cmd: Commands, new_connections: Res<NewConnectionRecv>) {
+pub fn accept_new_connections(
+    mut cmd: Commands,
+    new_connections: Res<NewConnectionRecv>,
+) {
     if new_connections.0.is_empty() {
         return;
     }
     while let Ok(new_connection) = new_connections.0.try_recv() {
         let return_sender = new_connection.entity_return;
+        let pdata = new_connection.player_data;
+        let position = Position {
+            x: pdata.position.x,
+            y: pdata.position.y,
+            z: pdata.position.z,
+        };
+        let inventory = Inventory::from(&pdata.inventory);
         let entity = cmd.spawn((
             new_connection.stream,
-            Position::default(),
+            position,
             ChunkReceiver::default(),
             Rotation::default(),
             OnGround::default(),
@@ -31,7 +41,7 @@ pub fn accept_new_connections(mut cmd: Commands, new_connections: Res<NewConnect
                 last_received_keep_alive: SystemTime::now(),
                 has_received_keep_alive: true,
             },
-            Inventory::default(),
+            inventory,
         ));
         trace!("Spawned entity for new connection: {:?}", entity.id());
         if let Err(err) = return_sender.send(entity.id()) {

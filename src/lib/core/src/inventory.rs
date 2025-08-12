@@ -1,5 +1,6 @@
 use bevy_ecs::prelude::Component;
 use ferrumc_world::{block_id::BlockId, recipes::RECIPES};
+use ferrumc_storage::player_data::{InventoryData, ItemStackData};
 
 #[derive(Debug, Clone)]
 pub struct ItemStack {
@@ -201,5 +202,71 @@ impl CraftingGrid {
             }
         }
         None
+    }
+}
+
+impl From<&ItemStack> for ItemStackData {
+    fn from(item: &ItemStack) -> Self {
+        Self {
+            item: item.item.0,
+            count: item.count,
+            max_stack_size: item.max_stack_size,
+            nbt: item.nbt.clone(),
+        }
+    }
+}
+
+impl From<&ItemStackData> for ItemStack {
+    fn from(data: &ItemStackData) -> Self {
+        ItemStack {
+            item: BlockId(data.item),
+            count: data.count,
+            max_stack_size: data.max_stack_size,
+            nbt: data.nbt.clone(),
+        }
+    }
+}
+
+impl From<&Inventory> for InventoryData {
+    fn from(inv: &Inventory) -> Self {
+        let hotbar = inv
+            .hotbar
+            .iter()
+            .map(|s| s.as_ref().map(ItemStackData::from))
+            .collect();
+        let main = inv
+            .main
+            .iter()
+            .map(|s| s.as_ref().map(ItemStackData::from))
+            .collect();
+        let equipment = inv
+            .equipment
+            .iter()
+            .map(|s| s.as_ref().map(ItemStackData::from))
+            .collect();
+        let offhand = inv.offhand.as_ref().map(ItemStackData::from);
+        InventoryData {
+            hotbar,
+            main,
+            equipment,
+            offhand,
+        }
+    }
+}
+
+impl From<&InventoryData> for Inventory {
+    fn from(data: &InventoryData) -> Self {
+        let mut inv = Inventory::default();
+        for (i, slot) in data.hotbar.iter().enumerate() {
+            inv.hotbar[i] = slot.as_ref().map(ItemStack::from);
+        }
+        for (i, slot) in data.main.iter().enumerate() {
+            inv.main[i] = slot.as_ref().map(ItemStack::from);
+        }
+        for (i, slot) in data.equipment.iter().enumerate() {
+            inv.equipment[i] = slot.as_ref().map(ItemStack::from);
+        }
+        inv.offhand = data.offhand.as_ref().map(ItemStack::from);
+        inv
     }
 }

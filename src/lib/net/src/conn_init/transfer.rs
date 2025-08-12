@@ -26,6 +26,7 @@ pub(super) async fn transfer<R: AsyncRead + Unpin>(
         LoginResult {
             player_identity: None,
             compression: false,
+            player_data: None,
         },
     ))
 }

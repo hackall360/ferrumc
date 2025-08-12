@@ -13,6 +13,7 @@ use crate::ConnState::*;
 use ferrumc_config::server_config::get_global_config;
 use ferrumc_core::identity::player_identity::PlayerIdentity;
 use ferrumc_core::inventory::Inventory;
+use ferrumc_storage::player_data::load_player_data;
 use ferrumc_macros::lookup_packet;
 use ferrumc_net_codec::decode::NetDecode;
 use ferrumc_net_codec::encode::NetEncodeOpts;
@@ -130,6 +131,7 @@ pub(super) async fn login<R: AsyncRead + Unpin>(
                     LoginResult {
                         player_identity: None,
                         compression: false,
+                        player_data: None,
                     },
                 ));
             }
@@ -193,6 +195,7 @@ pub(super) async fn login<R: AsyncRead + Unpin>(
             LoginResult {
                 player_identity: None,
                 compression: compressed,
+                player_data: None,
             },
         ));
     }
@@ -284,7 +287,9 @@ pub(super) async fn login<R: AsyncRead + Unpin>(
 
     // =============================================================================================
     // 10b Send initial inventory contents
-    let inventory = Inventory::default();
+    let player_data = load_player_data(state.world.backend(), player_uuid)
+        .map_err(|e| NetError::Misc(e.to_string()))?;
+    let inventory = Inventory::from(&player_data.inventory);
     let inv_packet = ContainerSetContentPacket::from_inventory(&inventory);
     conn_write.send_packet(inv_packet)?;
 
@@ -340,6 +345,7 @@ pub(super) async fn login<R: AsyncRead + Unpin>(
         LoginResult {
             player_identity: Some(player_identity),
             compression: compressed,
+            player_data: Some(player_data),
         },
     ))
 }

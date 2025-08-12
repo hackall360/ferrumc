@@ -1,17 +1,18 @@
 use crate::errors::NetError;
-use crate::packets::packet_events::PluginMessageEvent;
 use crate::packets::outgoing::{
-    entity_effect::EntityEffectPacket,
-    remove_entity_effect::RemoveEntityEffectPacket,
+    entity_effect::EntityEffectPacket, remove_entity_effect::RemoveEntityEffectPacket,
     update_health::UpdateHealthPacket,
 };
+use crate::packets::packet_events::{PlayerDiggingEvent, PluginMessageEvent, UseItemEvent};
 use crate::{connection::StreamWriter, CustomPayloadPacketReceiver};
-use bevy_ecs::prelude::{EventReader, EventWriter, Query, Res};
+use bevy_ecs::prelude::{EventReader, EventWriter, Query, Res, ResMut};
+use ferrumc_config::server_config::get_global_config;
+use ferrumc_core::chunks::block_break_progress::BlockBreakProgress;
+use ferrumc_core::conn::plugin_message::{PluginChannelRegisterEvent, PluginMessageSendEvent};
 use ferrumc_core::effects::{EffectAddEvent, EffectRemoveEvent};
 use ferrumc_core::health::HealthChangeEvent;
 use ferrumc_core::identity::player_identity::PlayerIdentity;
-use ferrumc_config::server_config::get_global_config;
-use ferrumc_core::conn::plugin_message::{PluginChannelRegisterEvent, PluginMessageSendEvent};
+use ferrumc_core::inventory::Inventory;
 use tokio::net::TcpListener;
 use tracing::{debug, error, warn};
 
@@ -111,11 +112,40 @@ pub fn route_health_and_effects(
 
     for evt in effect_remove_events.read() {
         if let Ok((writer, id)) = query.get(evt.entity) {
-            let packet =
-                RemoveEntityEffectPacket::new(id.short_uuid, evt.effect.id());
+            let packet = RemoveEntityEffectPacket::new(id.short_uuid, evt.effect.id());
             if let Err(e) = writer.send_packet(packet) {
                 warn!("Failed to send remove effect packet: {:?}", e);
             }
+        }
+    }
+}
+
+/// Handles block digging events and updates progress tracking.
+pub fn handle_player_digging(
+    mut events: EventReader<PlayerDiggingEvent>,
+    mut tracker: ResMut<BlockBreakProgress>,
+) {
+    for evt in events.read() {
+        let pos = &evt.position;
+        match evt.status {
+            0 => tracker.start(
+                pos.x as i32,
+                pos.y as i32,
+                pos.z as i32,
+                "overworld".to_string(),
+            ),
+            2 => tracker.clear(pos.x as i32, pos.y as i32, pos.z as i32, "overworld"),
+            _ => {}
+        }
+    }
+}
+
+/// Handles generic item use actions from players.
+pub fn handle_use_item(mut events: EventReader<UseItemEvent>, mut query: Query<&mut Inventory>) {
+    for evt in events.read() {
+        if let Ok(mut inv) = query.get_mut(evt.entity) {
+            let index = if evt.hand == 1 { 40 } else { 0 };
+            inv.right_click_slot(index);
         }
     }
 }

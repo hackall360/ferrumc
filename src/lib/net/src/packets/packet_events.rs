@@ -60,3 +60,17 @@ pub struct PluginMessageEvent {
     pub channel: String,
     pub data: Vec<u8>,
 }
+
+#[derive(Event, Debug)]
+pub struct PlayerDiggingEvent {
+    pub entity: Entity,
+    pub status: i32,
+    pub position: Position,
+    pub face: u8,
+}
+
+#[derive(Event, Debug)]
+pub struct UseItemEvent {
+    pub entity: Entity,
+    pub hand: i32,
+}

@@ -23,6 +23,15 @@ impl ItemStack {
 
 pub type Slot = Option<ItemStack>;
 
+/// Result of using an item via right click.
+#[derive(Debug, PartialEq)]
+pub enum ItemUseResult {
+    Placed,
+    Eaten,
+    ShotBow,
+    NoItem,
+}
+
 #[derive(Component, Debug, Clone, Default)]
 pub struct Inventory {
     pub hotbar: [Slot; 9],
@@ -95,7 +104,11 @@ impl Inventory {
                     let to_add = item.count.min(available);
                     existing.count += to_add;
                     item.count -= to_add;
-                    if item.count > 0 { Some(item) } else { None }
+                    if item.count > 0 {
+                        Some(item)
+                    } else {
+                        None
+                    }
                 }
                 Some(_) => Some(item),
                 None => {
@@ -108,5 +121,29 @@ impl Inventory {
         } else {
             Some(item)
         }
+    }
+
+    /// Uses the item in the specified slot as if right-clicked.
+    pub fn right_click_slot(&mut self, index: usize) -> ItemUseResult {
+        if let Some(slot) = self.get_slot_mut(index) {
+            if let Some(stack) = slot {
+                if let Some(data) = stack.item.to_block_data() {
+                    let name = data.name.as_str();
+                    if name.contains("bow") {
+                        return ItemUseResult::ShotBow;
+                    }
+                    stack.count = stack.count.saturating_sub(1);
+                    if stack.count == 0 {
+                        *slot = None;
+                    }
+                    return if name.contains("apple") || name.contains("bread") {
+                        ItemUseResult::Eaten
+                    } else {
+                        ItemUseResult::Placed
+                    };
+                }
+            }
+        }
+        ItemUseResult::NoItem
     }
 }

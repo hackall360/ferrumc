@@ -1,4 +1,3 @@
-use crate::ConnState::*;
 use crate::auth::verify_session;
 use crate::compression::compress_packet;
 use crate::conn_init::VarInt;
@@ -10,6 +9,7 @@ use crate::packets::incoming::packet_skeleton::PacketSkeleton;
 use crate::packets::outgoing::container_set_content::ContainerSetContentPacket;
 use crate::packets::outgoing::known_packs::{ClientboundKnownPacks, KnownPack as ClientKnownPack};
 use crate::packets::outgoing::login_disconnect::LoginDisconnectPacket;
+use crate::ConnState::*;
 use ferrumc_config::server_config::get_global_config;
 use ferrumc_core::identity::player_identity::PlayerIdentity;
 use ferrumc_core::inventory::Inventory;
@@ -212,6 +212,7 @@ pub(super) async fn login<R: AsyncRead + Unpin>(
         uuid: Uuid::from_u128(player_uuid),
         username: login_start.username.clone(),
         short_uuid: player_uuid as i32,
+        permission_level: 0,
     };
 
     // =============================================================================================

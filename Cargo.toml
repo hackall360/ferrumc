@@ -35,6 +35,7 @@ members = [
     "src/lib/world_gen",
     "src/lib/utils/threadpool",
     "src/tests",
+    "src/bin/example_plugin",
 ]
 
 #================== Lints ==================#

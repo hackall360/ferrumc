@@ -1,7 +1,9 @@
 use thiserror::Error;
 
-#[derive(Debug, Clone, Error)]
-pub enum PluginsError {
-    #[error("Something failed lol")]
-    SomeError,
+#[derive(Debug, Error)]
+pub enum PluginError {
+    #[error("io error: {0}")]
+    Io(#[from] std::io::Error),
+    #[error("loading error: {0}")]
+    Load(String),
 }

@@ -7,6 +7,7 @@ use ferrumc_net::{
 use ferrumc_state::GlobalStateResource;
 use ferrumc_text::TextComponent;
 use tracing::error;
+use ferrumc_plugins::PluginManager;
 
 use crate::commands::{CommandContext, CommandDispatcher};
 
@@ -30,21 +31,25 @@ where
     }
 }
 
-pub fn broadcast_chat_messages<'a>(
+pub fn broadcast_chat_messages(
     events: Res<IncomingChatMessagePacketReceiver>,
-    mut query: Query<'a, (
+    mut query: Query<(
         Entity,
-        &'a StreamWriter,
-        &'a mut ferrumc_core::transform::position::Position,
-        &'a mut ferrumc_core::inventory::Inventory,
-        &'a ferrumc_core::identity::player_identity::PlayerIdentity,
+        &StreamWriter,
+        &mut ferrumc_core::transform::position::Position,
+        &mut ferrumc_core::inventory::Inventory,
+        &ferrumc_core::identity::player_identity::PlayerIdentity,
     )>,
     state: Res<GlobalStateResource>,
     dispatcher: Res<CommandDispatcher>,
+    plugins: Res<PluginManager>,
 ) {
     for (packet, sender) in events.0.try_iter() {
-        if packet.message.starts_with('/') {
-            let line = packet.message.trim_start_matches('/');
+        let mut line = packet.message.clone();
+        plugins.on_chat_message(&mut line);
+        if line.starts_with('/') {
+            let line = line.trim_start_matches('/');
+            plugins.on_command(line);
             let ctx = CommandContext {
                 sender,
                 query: &mut query,
@@ -53,7 +58,7 @@ pub fn broadcast_chat_messages<'a>(
             };
             dispatcher.dispatch(line, ctx);
         } else {
-            let message = TextComponent::from(packet.message.clone());
+            let message = TextComponent::from(line);
             broadcast_text(
                 message,
                 query.iter_mut().map(|(e, conn, _, _, _)| (e, conn)),

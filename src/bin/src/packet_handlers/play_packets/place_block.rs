@@ -14,12 +14,14 @@ use ferrumc_state::GlobalStateResource;
 use ferrumc_world::block_id::BlockId;
 use ferrumc_world::vanilla_chunk_format::BlockData;
 use tracing::{debug, trace};
+use ferrumc_plugins::PluginManager;
 
 pub fn handle(
     events: Res<PlaceBlockReceiver>,
     state: Res<GlobalStateResource>,
     conn_q: Query<(Entity, &StreamWriter)>,
     pos_q: Query<(&Position, &CollisionBounds)>,
+    plugins: Res<PluginManager>,
 ) {
     'ev_loop: for (event, eid) in events.0.try_iter() {
         let res: Result<(), BinaryError> = try {
@@ -120,6 +122,7 @@ pub fn handle(
             }
 
             chunk.set_block(x & 0xF, y as i32, z & 0xF, block_id)?;
+            plugins.on_block_edit((x, y as i32, z), block_id.0);
 
             let chunk_packet = BlockUpdate {
                 location: NetworkPosition { x, y, z },

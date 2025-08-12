@@ -26,6 +26,7 @@ rand = { workspace = true }
 serde_json = { workspace = true }
 reqwest = { workspace = true }
 sha1 = { workspace = true }
+ferrumc-world-gen = { workspace = true }
 
 [lints]
 workspace = true

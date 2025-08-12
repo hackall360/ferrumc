@@ -19,6 +19,24 @@ Keep in mind that clippy, rustfmt and cargo-audit are enforced on CI, so make su
 8. Check that Cargo-audit passes with no issues. `cargo audit` is used on CI.
 9. Submit PR.
 
+## Testing
+
+Run the full test suite before opening a pull request:
+
+```
+cargo nextest run --all-targets --all-features -E "not kind(bench)"
+```
+
+Format and lint the code as CI does:
+
+```
+cargo fmt --all -- --check
+cargo clippy --all-targets -- -D warnings
+```
+
+Benchmarks can be compiled and executed with `cargo bench` when reviewing
+performance changes.
+
 ## Project specific guidelines
 
 Just some rules to try to keep the repo nice and organised

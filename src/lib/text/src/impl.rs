@@ -88,6 +88,21 @@ impl TextComponent {
     );
     make_bool_setters!(bold, italic, underlined, strikethrough, obfuscated);
 
+    /// Convert this component into its JSON representation.
+    pub fn to_json(&self) -> String {
+        serde_json::to_string(self).unwrap_or_default()
+    }
+
+    /// Create a component from a JSON string.
+    pub fn from_json<S: AsRef<str>>(s: S) -> serde_json::Result<Self> {
+        serde_json::from_str(s.as_ref())
+    }
+
+    /// Convenience method to create a translation component.
+    pub fn translate_key<S: Into<String>>(key: S, with: Vec<TextComponent>) -> Self {
+        ComponentBuilder::translate(key, with)
+    }
+
     pub fn serialize_nbt(&self) -> Vec<u8> {
         let mut vec = Vec::new();
         NBTSerializable::serialize(self, &mut vec, &NBTSerializeOptions::Network);

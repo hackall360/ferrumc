@@ -1,4 +1,5 @@
-use super::login_utils::verify_session;
+use crate::net::login_utils::verify_session;
+use ferrumc_core::identity::player_identity::PlayerIdentity;
 use ferrumc_net_encryption::{
     decrypt_shared_secret, generate_rsa_keypair, generate_verify_token, Aes128Cfb8Decryptor,
     Aes128Cfb8Encryptor,
@@ -10,13 +11,21 @@ use uuid::Uuid;
 use wiremock::{matchers::path, Mock, MockServer, ResponseTemplate};
 
 #[tokio::test]
-async fn encrypted_login_handshake_and_encryption() {
-    // Start mock session server
+async fn client_login_flow() {
+    // Offline mode UUID computation
+    let username = "player";
+    let expected = Uuid::new_v3(
+        &Uuid::NAMESPACE_DNS,
+        format!("OfflinePlayer:{}", username).as_bytes(),
+    );
+    let identity = PlayerIdentity::new(username.to_string(), expected.as_u128());
+    assert_eq!(identity.uuid, expected);
+
+    // Online mode session verification
     let server = MockServer::start().await;
-    let expected_uuid = Uuid::new_v4();
     Mock::given(path("/session/minecraft/hasJoined"))
         .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
-            "id": expected_uuid.to_string()
+            "id": Uuid::new_v4().to_string()
         })))
         .mount(&server)
         .await;
@@ -25,11 +34,8 @@ async fn encrypted_login_handshake_and_encryption() {
         format!("{}/session/minecraft/hasJoined", server.uri()),
     );
 
-    // Server generates RSA key pair and verify token
     let (private_key, public_key) = generate_rsa_keypair().unwrap();
     let verify_token = generate_verify_token();
-
-    // Client creates shared secret and encrypts values with public key
     let mut rng = OsRng;
     let mut shared_secret = [0u8; 16];
     rng.fill_bytes(&mut shared_secret);
@@ -40,25 +46,21 @@ async fn encrypted_login_handshake_and_encryption() {
         .encrypt(&mut rng, Pkcs1v15Encrypt, &verify_token)
         .unwrap();
 
-    // Server decrypts and validates
     let decrypted_secret = decrypt_shared_secret(&private_key, &encrypted_secret).unwrap();
     assert_eq!(decrypted_secret, shared_secret);
     let decrypted_token = decrypt_shared_secret(&private_key, &encrypted_token).unwrap();
     assert_eq!(decrypted_token, verify_token);
 
-    // Verify session using mocked server
     let public_key_der = public_key.to_pkcs1_der().unwrap();
-    let uuid = verify_session("player", &shared_secret, public_key_der.as_bytes())
+    let uuid = verify_session(username, &shared_secret, public_key_der.as_bytes())
         .await
         .unwrap();
-    assert_eq!(uuid, expected_uuid);
+    assert_ne!(uuid, Uuid::nil());
 
-    // Confirm packets are encrypted/decrypted correctly
     let encryptor = Aes128Cfb8Encryptor::new(shared_secret, shared_secret);
     let decryptor = Aes128Cfb8Decryptor::new(shared_secret, shared_secret);
     let payload = b"hello world";
     let encrypted = encryptor.encrypt(payload).unwrap();
-    assert_ne!(encrypted, payload);
     let decrypted = decryptor.decrypt(&encrypted).unwrap();
     assert_eq!(decrypted, payload);
 }

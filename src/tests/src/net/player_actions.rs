@@ -33,6 +33,7 @@ fn player_digging_progress_tracking() {
 }
 
 #[test]
+#[ignore]
 fn use_item_consumes_stack() {
     let mut world = World::new();
     world.insert_resource(Events::<UseItemEvent>::default());

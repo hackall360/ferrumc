@@ -74,6 +74,7 @@ fn direct_palette_round_trip() {
         dimension: "overworld".to_string(),
         sections: vec![section],
         heightmaps: Heightmaps::default(),
+        block_entities: vec![],
     };
 
     // Set a couple of blocks to non-zero ids

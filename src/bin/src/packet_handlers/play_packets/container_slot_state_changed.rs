@@ -1,7 +1,9 @@
 use bevy_ecs::prelude::{Entity, Query, Res};
 use ferrumc_core::inventory::{Inventory, ItemStack};
 use ferrumc_net::connection::StreamWriter;
+use ferrumc_net::packets::outgoing::container_set_content::ContainerSetContentPacket;
 use ferrumc_net::packets::outgoing::container_set_slot::ContainerSetSlotPacket;
+use ferrumc_net::packets::outgoing::crafted_recipe::CraftedRecipePacket;
 use ferrumc_net::ContainerSlotStateChangedReceiver;
 use ferrumc_net_codec::net_types::prefixed_optional::PrefixedOptional;
 use ferrumc_state::GlobalStateResource;
@@ -43,6 +45,16 @@ pub fn handle(
         );
         if let Err(e) = conn.send_packet_ref(&packet) {
             debug!("Failed to send container slot update: {:?}", e);
+        }
+        let content_packet = ContainerSetContentPacket::from_inventory(&inv);
+        if let Err(e) = conn.send_packet_ref(&content_packet) {
+            debug!("Failed to send container content update: {:?}", e);
+        }
+        if slot_index == 0 {
+            let recipe_packet = CraftedRecipePacket::new("ferrumc:test");
+            if let Err(e) = conn.send_packet_ref(&recipe_packet) {
+                debug!("Failed to send crafted recipe: {:?}", e);
+            }
         }
     }
 }

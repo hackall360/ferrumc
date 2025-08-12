@@ -6,6 +6,7 @@ pub mod container_close;
 pub mod container_set_content;
 pub mod container_set_slot;
 pub mod disconnect;
+pub mod crafted_recipe;
 pub mod update_health;
 pub mod entity_effect;
 pub mod remove_entity_effect;

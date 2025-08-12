@@ -1,5 +1,5 @@
 use bevy_ecs::prelude::Component;
-use ferrumc_world::block_id::BlockId;
+use ferrumc_world::{block_id::BlockId, recipes::RECIPES};
 
 #[derive(Debug, Clone)]
 pub struct ItemStack {
@@ -145,5 +145,61 @@ impl Inventory {
             }
         }
         ItemUseResult::NoItem
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct CraftingGrid {
+    pub slots: [Slot; 9],
+}
+
+impl CraftingGrid {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn set_slot(&mut self, index: usize, slot: Slot) {
+        if index < self.slots.len() {
+            self.slots[index] = slot;
+        }
+    }
+
+    pub fn craft(&mut self) -> Option<ItemStack> {
+        for recipe in RECIPES.iter() {
+            if recipe.pattern.len() != self.slots.len() {
+                continue;
+            }
+            let matches = recipe
+                .pattern
+                .iter()
+                .enumerate()
+                .all(|(i, r)| match r {
+                    Some(expected) => self.slots[i]
+                        .as_ref()
+                        .map(|s| s.item)
+                        .filter(|id| id == expected)
+                        .is_some(),
+                    None => self.slots[i].is_none(),
+                });
+            if matches {
+                for (i, r) in recipe.pattern.iter().enumerate() {
+                    if r.is_some() {
+                        if let Some(slot) = self.slots.get_mut(i) {
+                            if let Some(stack) = slot {
+                                if stack.count > 0 {
+                                    stack.count -= 1;
+                                }
+                                if stack.count == 0 {
+                                    *slot = None;
+                                }
+                            }
+                        }
+                    }
+                }
+                let (id, count) = recipe.output;
+                return Some(ItemStack::new(id, count, 64, None));
+            }
+        }
+        None
     }
 }

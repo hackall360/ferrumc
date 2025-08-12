@@ -9,6 +9,7 @@ use ferrumc_core::transform::rotation::Rotation;
 use ferrumc_net::connection::NewConnection;
 use std::time::SystemTime;
 use tracing::{error, trace};
+use ferrumc_plugins::PluginManager;
 
 #[derive(Resource)]
 pub struct NewConnectionRecv(pub Receiver<NewConnection>);
@@ -16,6 +17,7 @@ pub struct NewConnectionRecv(pub Receiver<NewConnection>);
 pub fn accept_new_connections(
     mut cmd: Commands,
     new_connections: Res<NewConnectionRecv>,
+    plugins: Res<PluginManager>,
 ) {
     if new_connections.0.is_empty() {
         return;
@@ -43,8 +45,10 @@ pub fn accept_new_connections(
             },
             inventory,
         ));
-        trace!("Spawned entity for new connection: {:?}", entity.id());
-        if let Err(err) = return_sender.send(entity.id()) {
+        let entity_id = entity.id();
+        trace!("Spawned entity for new connection: {:?}", entity_id);
+        plugins.on_entity_spawn(entity_id.index() as u64);
+        if let Err(err) = return_sender.send(entity_id) {
             error!(
                 "Failed to send entity ID back to the networking thread: {:?}",
                 err

@@ -1,7 +1,6 @@
 use bevy_ecs::query::QueryEntityError;
 use ferrumc_core::errors::CoreError;
 use ferrumc_net::errors::NetError;
-use ferrumc_plugins::errors::PluginsError;
 use ferrumc_storage::errors::StorageError;
 use ferrumc_utils::errors::UtilsError;
 use ferrumc_world::errors::WorldError;
@@ -18,8 +17,6 @@ pub enum BinaryError {
     #[error("Net error: {0}")]
     Net(#[from] NetError),
 
-    #[error("Plugins error: {0}")]
-    Plugins(#[from] PluginsError),
 
     #[error("Storage error: {0}")]
     Storage(#[from] StorageError),

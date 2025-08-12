@@ -8,6 +8,8 @@ use ferrumc_core::chunks::world_sync_tracker::WorldSyncTracker;
 use ferrumc_core::conn::player_count_update_cooldown::PlayerCountUpdateCooldown;
 use ferrumc_net::connection::NewConnection;
 use ferrumc_state::GlobalStateResource;
+use ferrumc_plugins::PluginManager;
+use tracing::warn;
 
 pub fn register_resources(
     world: &mut World,
@@ -22,6 +24,12 @@ pub fn register_resources(
     world.insert_resource(WorldSyncTracker {
         last_synced: std::time::Instant::now(),
     });
+
+    let mut plugins = PluginManager::default();
+    if let Err(e) = plugins.load_from_dir("plugins") {
+        warn!("failed to load plugins: {e}");
+    }
+    world.insert_resource(plugins);
 
     let mut dispatcher = CommandDispatcher::new();
     dispatcher.register(say_command());

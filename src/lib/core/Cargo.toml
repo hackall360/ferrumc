@@ -15,6 +15,7 @@ ferrumc-world = { workspace = true }
 ferrumc-macros = { workspace = true }
 ferrumc-state = { workspace = true }
 rand = { workspace = true }
+once_cell = { workspace = true }
 
 [dev-dependencies]
 criterion = { workspace = true }

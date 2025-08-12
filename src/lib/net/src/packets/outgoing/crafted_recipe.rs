@@ -1,3 +1,4 @@
+use std::io::Write;
 use ferrumc_macros::{NetEncode, packet};
 
 #[derive(NetEncode)]

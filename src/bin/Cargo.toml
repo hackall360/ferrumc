@@ -38,6 +38,8 @@ tokio = { workspace = true, features = ["full"] }
 crossbeam-channel = { workspace = true }
 uuid = { workspace = true }
 dhat = { workspace = true }
+brigadier_rs = { workspace = true }
+nom = { workspace = true }
 
 [features]
 dhat = []

@@ -388,6 +388,21 @@
       },
       "minecraft:sound": {
         "protocol_id": 110
+      },
+      "minecraft:entity_effect": {
+        "protocol_id": 111
+      },
+      "minecraft:remove_entity_effect": {
+        "protocol_id": 112
+      },
+      "minecraft:update_health": {
+        "protocol_id": 113
+      },
+      "minecraft:crafted_recipe": {
+        "protocol_id": 114
+      },
+      "minecraft:chat_message": {
+        "protocol_id": 115
       }
     },
     "serverbound": {
@@ -543,6 +558,24 @@
       },
       "minecraft:set_beacon": {
         "protocol_id": 50
+      },
+      "minecraft:chat_message": {
+        "protocol_id": 51
+      },
+      "minecraft:craft_recipe_request": {
+        "protocol_id": 52
+      },
+      "minecraft:displayed_recipe": {
+        "protocol_id": 53
+      },
+      "minecraft:recipe_book": {
+        "protocol_id": 54
+      },
+      "minecraft:swing": {
+        "protocol_id": 55
+      },
+      "minecraft:use_item_on": {
+        "protocol_id": 56
       }
     }
   },

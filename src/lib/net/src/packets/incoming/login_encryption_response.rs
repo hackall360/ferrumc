@@ -5,7 +5,7 @@ use ferrumc_net_codec::net_types::var_int::VarInt;
 use std::io::Read;
 use tokio::io::{AsyncRead, AsyncReadExt};
 
-#[packet(packet_id = 0x01, state = "login")]
+#[packet(packet_id = "key", state = "login")]
 #[derive(Debug)]
 pub struct LoginEncryptionResponse {
     pub shared_secret: Vec<u8>,

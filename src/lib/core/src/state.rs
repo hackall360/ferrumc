@@ -10,6 +10,9 @@ use crate::identity::entity_id::EntityId;
 use crate::movement::Movement;
 use crate::transform::position::Position;
 use crate::transform::rotation::Rotation;
+use crate::furnace::{furnace_tick, Furnace};
+use crate::brewing::{brewing_tick, BrewingStand};
+use crate::inventory::Inventory;
 
 /// System that advances the world by one tick.
 pub fn tick_world(state: Res<GlobalStateResource>) {
@@ -66,4 +69,12 @@ fn select_weighted(rules: &[SpawnRule]) -> Option<EntityKind> {
         roll -= rule.weight;
     }
     None
+}
+
+pub fn process_furnaces(query: Query<(&mut Furnace, &mut Inventory)>) {
+    furnace_tick(query);
+}
+
+pub fn process_brewing_stands(query: Query<(&mut BrewingStand, &mut Inventory)>) {
+    brewing_tick(query);
 }

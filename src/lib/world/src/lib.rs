@@ -10,6 +10,7 @@ mod importing;
 pub mod redstone;
 pub mod tick;
 pub mod vanilla_chunk_format;
+pub mod recipes;
 
 use crate::chunk_format::Chunk;
 use crate::errors::WorldError;
@@ -126,6 +127,7 @@ impl World {
     /// You'd probably want to call this at the start of your program. And then use the returned
     /// in a state struct or something.
     pub fn new(backend_path: impl Into<PathBuf>) -> Self {
+        recipes::init();
         if let Err(e) = check_config_validity() {
             error!("Fatal error in database config: {}", e);
             exit(1);

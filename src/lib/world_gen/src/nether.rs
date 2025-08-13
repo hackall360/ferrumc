@@ -2,12 +2,15 @@ use crate::biomes::simple::{SimpleBiome, Veg};
 use crate::errors::WorldGenError;
 use crate::noise_settings::NETHER_NOISE_SETTINGS;
 use crate::{BiomeGenerator, NoiseGenerator};
+use crate::structures::StructurePlacer;
 use ferrumc_world::chunk_format::Chunk;
 
 /// Basic nether terrain generator.
 pub struct NetherGenerator {
     noise: NoiseGenerator,
     biome: SimpleBiome,
+    structures: Vec<Box<dyn StructurePlacer + Send + Sync>>,
+    seed: u64,
 }
 
 impl NetherGenerator {
@@ -24,10 +27,20 @@ impl NetherGenerator {
                 Veg::None,
                 32.0,
             ),
+            structures: vec![],
+            seed,
+        }
+    }
+
+    fn apply_structures(&self, chunk: &mut Chunk) {
+        for s in &self.structures {
+            s.place(chunk, self.seed);
         }
     }
 
     pub fn generate_chunk(&self, x: i32, z: i32) -> Result<Chunk, WorldGenError> {
-        self.biome.generate_chunk(x, z, &self.noise)
+        let mut chunk = self.biome.generate_chunk(x, z, &self.noise)?;
+        self.apply_structures(&mut chunk);
+        Ok(chunk)
     }
 }

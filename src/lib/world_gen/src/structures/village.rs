@@ -1,11 +1,14 @@
-use super::StructurePlacer;
+use super::{should_place_structure, StructurePlacer};
 use ferrumc_world::chunk_format::Chunk;
 use ferrumc_world::vanilla_chunk_format::BlockData;
 
 pub struct Village;
 
 impl StructurePlacer for Village {
-    fn place(&self, chunk: &mut Chunk) {
+    fn place(&self, chunk: &mut Chunk, seed: u64) {
+        if !should_place_structure(seed, 10_387_312, 32, 8, chunk.x, chunk.z) {
+            return;
+        }
         let block = BlockData {
             name: "minecraft:cobblestone".into(),
             properties: None,

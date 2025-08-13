@@ -6,9 +6,12 @@ pub mod nether;
 pub mod end;
 
 use crate::errors::WorldGenError;
+use ferrumc_world::block_id::BlockId;
 use ferrumc_world::chunk_format::Chunk;
+use ferrumc_world::vanilla_chunk_format::BlockData;
 use noise::{Clamp, NoiseFn, OpenSimplex};
 use noise_settings::{NoiseSettings, OVERWORLD_NOISE_SETTINGS};
+use std::collections::BTreeMap;
 use structures::{temple::Temple, village::Village, StructurePlacer};
 
 /// Trait for generating a biome
@@ -50,10 +53,11 @@ impl NoiseGenerator {
     pub fn get_noise(&self, x: f64, z: f64) -> f64 {
         let mut noise = 0.0;
         for (c, layer) in self.layers.iter().enumerate() {
-            let scale = 64.0_f64.powi(c as i32 + 1);
+            let scale =
+                self.settings.xz_factor * self.settings.xz_scale.powi(c as i32 + 1);
             noise += layer.get([x / scale, z / scale]);
         }
-        noise / (self.layers.len() as f64 / 2.0)
+        noise / (self.layers.len() as f64)
     }
 }
 
@@ -94,15 +98,99 @@ impl WorldGenerator {
         biome.generate_chunk(x, z, &self.noise_generator)
     }
 
-    fn apply_surface(&self, _chunk: &mut Chunk) {}
+    fn apply_surface(&self, chunk: &mut Chunk) {
+        // Ensure a bedrock floor at the bottom of the world for all dimensions
+        let bedrock = BlockData {
+            name: "minecraft:bedrock".into(),
+            properties: None,
+        };
+        for x in 0..16 {
+            for z in 0..16 {
+                // Errors are ignored as missing sections are non-critical during generation
+                let _ = chunk.set_block(x, 0, z, bedrock.to_block_id());
+            }
+        }
+    }
 
-    fn apply_carvers(&self, _chunk: &mut Chunk) {}
+    fn apply_carvers(&self, chunk: &mut Chunk) {
+        if chunk.dimension != "overworld" {
+            return;
+        }
+        let chunk_x = chunk.x;
+        let chunk_z = chunk.z;
+        let air = BlockData {
+            name: "minecraft:air".into(),
+            properties: None,
+        };
+        let air_id = air.to_block_id();
+        for lx in 0..16 {
+            for lz in 0..16 {
+                let global_x = chunk_x * 16 + lx;
+                let global_z = chunk_z * 16 + lz;
+                let n = self.noise_generator.get_noise(global_x as f64, global_z as f64);
+                if n > 0.65 {
+                    for y in 20..50 {
+                        // Ignore errors from sections that may not exist yet
+                        let _ = chunk.set_block(lx, y, lz, air_id);
+                    }
+                }
+            }
+        }
+    }
 
-    fn apply_features(&self, _chunk: &mut Chunk) {}
+    fn apply_features(&self, chunk: &mut Chunk) {
+        match chunk.dimension.as_str() {
+            "overworld" => {
+                // Fill oceans with water up to sea level
+                let water = BlockData {
+                    name: "minecraft:water".to_string(),
+                    properties: Some(BTreeMap::from([(
+                        "level".to_string(),
+                        "0".to_string(),
+                    )])),
+                };
+                let water_id = water.to_block_id();
+                for x in 0..16 {
+                    for z in 0..16 {
+                        for y in 0..63 {
+                            if let Ok(block) = chunk.get_block(x, y, z) {
+                                if block == BlockId::default() {
+                                    let _ = chunk.set_block(x, y, z, water_id);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            "the_nether" => {
+                // Add a lava ocean similar to vanilla behaviour
+                let lava = BlockData {
+                    name: "minecraft:lava".to_string(),
+                    properties: Some(BTreeMap::from([(
+                        "level".to_string(),
+                        "0".to_string(),
+                    )])),
+                };
+                let lava_id = lava.to_block_id();
+                for x in 0..16 {
+                    for z in 0..16 {
+                        for y in 0..32 {
+                            if let Ok(block) = chunk.get_block(x, y, z) {
+                                if block == BlockId::default() {
+                                    let _ = chunk.set_block(x, y, z, lava_id);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
 
     fn apply_structures(&self, chunk: &mut Chunk) {
         for s in &self.structures {
-            s.place(chunk);
+            s.place(chunk, self._seed);
         }
     }
 

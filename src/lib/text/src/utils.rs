@@ -45,18 +45,55 @@ macro_rules! make_setters {
     }
 }
 
-// TODO: better api for custom colors
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, NBTSerialize)]
-#[serde(untagged)]
-#[nbt(tag_type = 8)]
-pub enum Color {
-    Named(NamedColor),
-    Hex(String),
+pub type Color = String;
+
+/// Errors that can occur when parsing custom colors.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ColorError {
+    /// Provided hex string was not valid.
+    InvalidHex,
 }
 
-impl From<NamedColor> for Color {
+/// Convert RGB values into a hex color string.
+pub fn rgb_color(r: u8, g: u8, b: u8) -> Color {
+    format!("#{r:02x}{g:02x}{b:02x}")
+}
+
+/// Validate and normalise a hex color string.
+pub fn hex_color<S: AsRef<str>>(hex: S) -> Result<Color, ColorError> {
+    let h = hex.as_ref();
+    let h = if let Some(stripped) = h.strip_prefix('#') {
+        stripped
+    } else {
+        h
+    };
+    if h.len() != 6 || !h.chars().all(|c| c.is_ascii_hexdigit()) {
+        return Err(ColorError::InvalidHex);
+    }
+    Ok(format!("#{}", h.to_lowercase()))
+}
+
+impl From<NamedColor> for String {
     fn from(value: NamedColor) -> Self {
-        Self::Named(value)
+        match value {
+            NamedColor::Black => "black",
+            NamedColor::DarkBlue => "dark_blue",
+            NamedColor::DarkGreen => "dark_green",
+            NamedColor::DarkAqua => "dark_aqua",
+            NamedColor::DarkRed => "dark_red",
+            NamedColor::DarkPurple => "dark_purple",
+            NamedColor::Gold => "gold",
+            NamedColor::Gray => "gray",
+            NamedColor::DarkGray => "dark_gray",
+            NamedColor::Blue => "blue",
+            NamedColor::Green => "green",
+            NamedColor::Aqua => "aqua",
+            NamedColor::Red => "red",
+            NamedColor::LightPurple => "light_purple",
+            NamedColor::Yellow => "yellow",
+            NamedColor::White => "white",
+        }
+        .to_string()
     }
 }
 

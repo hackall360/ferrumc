@@ -83,6 +83,18 @@ impl TextComponentBuilder {
     );
     make_bool_setters!(bold, italic, underlined, strikethrough, obfuscated);
 
+    /// Set a custom color using a hex string (e.g. "#ff00ff").
+    pub fn color_hex(mut self, hex: impl AsRef<str>) -> Result<Self, ColorError> {
+        self.color = Some(hex_color(hex)?);
+        Ok(self)
+    }
+
+    /// Set a custom color using RGB components.
+    pub fn color_rgb(mut self, r: u8, g: u8, b: u8) -> Self {
+        self.color = Some(rgb_color(r, g, b));
+        self
+    }
+
     pub fn space(self) -> Self {
         self.extra(ComponentBuilder::space())
     }

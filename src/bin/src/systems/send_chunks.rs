@@ -1,5 +1,6 @@
 use crate::errors::BinaryError;
 use bevy_ecs::prelude::Mut;
+use ferrumc_macros::profile;
 use ferrumc_net::compression::compress_packet;
 use ferrumc_net::connection::StreamWriter;
 use ferrumc_net::errors::NetError;
@@ -11,9 +12,11 @@ use ferrumc_net_codec::encode::NetEncode;
 use ferrumc_net_codec::encode::NetEncodeOpts::WithLength;
 use ferrumc_net_codec::net_types::var_int::VarInt;
 use ferrumc_state::GlobalState;
+use ferrumc_utils::metrics::CHUNK_STREAM_HISTOGRAM;
 use std::sync::atomic::Ordering;
 use tracing::{error, trace};
 
+#[profile("chunk_streaming")]
 pub fn send_chunks(
     state: GlobalState,
     mut chunk_coords: Vec<(i32, i32, String)>,
@@ -21,6 +24,7 @@ pub fn send_chunks(
     // recv: &mut Mut<ChunkReceiver>,
     center_chunk: (i32, i32),
 ) -> Result<(), BinaryError> {
+    let _timer = CHUNK_STREAM_HISTOGRAM.start_timer();
     let (center_x, center_z) = center_chunk;
 
     // Sort the chunks by distance from the center

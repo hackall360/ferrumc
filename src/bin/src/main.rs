@@ -37,6 +37,12 @@ fn main() {
 
     let cli_args = CLIArgs::parse();
     ferrumc_logging::init_logging(cli_args.log.into());
+    let profile_key = if cli_args.profiling {
+        Some(ferrumc_profiling::start_profiler())
+    } else {
+        None
+    };
+    ferrumc_utils::metrics::init_metrics();
 
     match cli_args.command {
         Some(Command::Setup) => {
@@ -68,6 +74,14 @@ fn main() {
             } else {
                 info!("Server exited successfully.");
             }
+        }
+    }
+
+    if let Some(key) = profile_key {
+        let results = ferrumc_profiling::stop_profiling(key);
+        match serde_json::to_string(&results) {
+            Ok(json) => info!("Profiling results: {}", json),
+            Err(err) => error!("Failed to serialize profiling results: {:?}", err),
         }
     }
 }

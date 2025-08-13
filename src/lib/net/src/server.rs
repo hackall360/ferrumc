@@ -3,6 +3,8 @@ use crate::packets::outgoing::{
     entity_effect::EntityEffectPacket, remove_entity_effect::RemoveEntityEffectPacket,
     update_health::UpdateHealthPacket,
 };
+use ferrumc_macros::profile;
+use ferrumc_utils::metrics::PACKET_PROCESS_HISTOGRAM;
 use crate::packets::packet_events::{PlayerDiggingEvent, PluginMessageEvent, UseItemEvent};
 use crate::{connection::StreamWriter, CustomPayloadPacketReceiver};
 use bevy_ecs::prelude::{EventReader, EventWriter, Query, Res, ResMut};
@@ -37,6 +39,7 @@ pub async fn create_server_listener() -> Result<TcpListener, NetError> {
 }
 
 /// Routes plugin channel traffic between the network layer and the ECS world.
+#[profile("packet_processing")]
 pub fn route_plugin_messages(
     receiver: Res<CustomPayloadPacketReceiver>,
     mut incoming_writer: EventWriter<PluginMessageEvent>,
@@ -44,6 +47,7 @@ pub fn route_plugin_messages(
     mut send_events: EventReader<PluginMessageSendEvent>,
     mut query: Query<&StreamWriter>,
 ) {
+    let _timer = PACKET_PROCESS_HISTOGRAM.start_timer();
     for (packet, entity) in receiver.0.try_iter() {
         incoming_writer.write(PluginMessageEvent {
             entity,

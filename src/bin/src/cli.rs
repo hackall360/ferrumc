@@ -8,6 +8,9 @@ pub struct CLIArgs {
     #[clap(long)]
     #[arg(value_enum, default_value_t = LogLevel(Level::DEBUG))]
     pub log: LogLevel,
+    /// Enable runtime profiling of hot paths
+    #[clap(long)]
+    pub profiling: bool,
 }
 
 #[derive(Subcommand, Clone)]

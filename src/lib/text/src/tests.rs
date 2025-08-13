@@ -83,6 +83,27 @@ fn test_to_string() {
     assert_eq!(component.to_string(), Text::keybind("key.jump").to_string());
 }
 
+#[test]
+fn custom_color_builders() {
+    let named = ComponentBuilder::text("named")
+        .color(NamedColor::Red)
+        .build();
+    assert_eq!(named.color, Some("red".to_string()));
+
+    let hex = ComponentBuilder::text("hex")
+        .color_hex("#aabbcc")
+        .unwrap()
+        .build();
+    assert_eq!(hex.color, Some("#aabbcc".to_string()));
+
+    let rgb = ComponentBuilder::text("rgb")
+        .color_rgb(0xaa, 0xbb, 0xcc)
+        .build();
+    assert_eq!(rgb.color, Some("#aabbcc".to_string()));
+
+    assert!(ComponentBuilder::text("bad").color_hex("zzzzzz").is_err());
+}
+
 use ferrumc_macros::{packet, NetEncode};
 use ferrumc_nbt::NBTSerializable;
 use ferrumc_nbt::NBTSerializeOptions;

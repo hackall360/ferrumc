@@ -6,6 +6,7 @@ pub trait StructurePlacer {
     fn place(&self, chunk: &mut ferrumc_world::chunk_format::Chunk, seed: u64);
 }
 
+pub mod template;
 pub mod temple;
 pub mod village;
 
@@ -32,7 +33,8 @@ pub fn should_place_structure(
     let region_x = floor_div(chunk_x, spacing);
     let region_z = floor_div(chunk_z, spacing);
     let mut rng = rand::rngs::StdRng::seed_from_u64(
-        (region_x as i64 * 341_873_128_712 + region_z as i64 * 132_897_987_541
+        (region_x as i64 * 341_873_128_712
+            + region_z as i64 * 132_897_987_541
             + seed as i64
             + salt as i64) as u64,
     );

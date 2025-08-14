@@ -1,210 +1,383 @@
-use bevy_ecs::prelude::Component;
-use typename::TypeName;
-
-use ferrumc_macros::get_registry_entry;
-use std::cmp::Ordering;
-use std::collections::{BinaryHeap, HashMap};
-use std::hash::Hash;
-
 #[derive(TypeName, Component, Debug, Clone, Copy, Eq, PartialEq)]
 pub enum EntityKind {
+    Allay,
+    AreaEffectCloud,
+    ArmorStand,
+    Arrow,
+    Axolotl,
+    Bat,
+    Bee,
+    Blaze,
+    BlockDisplay,
+    Boat,
+    Camel,
+    Cat,
+    CaveSpider,
+    ChestBoat,
+    ChestMinecart,
+    Chicken,
+    Cod,
+    CommandBlockMinecart,
     Cow,
-    Zombie,
+    Creeper,
+    Dolphin,
+    Donkey,
+    DragonFireball,
+    Drowned,
+    Egg,
+    ElderGuardian,
+    EndCrystal,
+    EnderDragon,
+    EnderPearl,
+    Enderman,
+    Endermite,
+    Evoker,
+    EvokerFangs,
+    ExperienceBottle,
+    ExperienceOrb,
+    EyeOfEnder,
+    FallingBlock,
+    FireworkRocket,
+    Fox,
+    Frog,
+    FurnaceMinecart,
+    Ghast,
+    Giant,
+    GlowItemFrame,
+    GlowSquid,
+    Goat,
+    Guardian,
+    Hoglin,
+    HopperMinecart,
+    Horse,
+    Husk,
+    Illusioner,
+    Interaction,
+    IronGolem,
+    Item,
+    ItemDisplay,
+    ItemFrame,
+    Fireball,
+    LeashKnot,
+    LightningBolt,
+    Llama,
+    LlamaSpit,
+    MagmaCube,
+    Marker,
+    Minecart,
+    Mooshroom,
+    Mule,
+    Ocelot,
+    Painting,
+    Panda,
+    Parrot,
+    Phantom,
+    Pig,
+    Piglin,
+    PiglinBrute,
+    Pillager,
+    PolarBear,
+    Potion,
+    Pufferfish,
+    Rabbit,
+    Ravager,
+    Salmon,
+    Sheep,
+    Shulker,
+    ShulkerBullet,
+    Silverfish,
     Skeleton,
+    SkeletonHorse,
+    Slime,
+    SmallFireball,
+    Sniffer,
+    SnowGolem,
+    Snowball,
+    SpawnerMinecart,
+    SpectralArrow,
+    Spider,
+    Squid,
+    Stray,
+    Strider,
+    Tadpole,
+    TextDisplay,
+    Tnt,
+    TntMinecart,
+    TraderLlama,
+    Trident,
+    TropicalFish,
+    Turtle,
+    Vex,
+    Villager,
+    Vindicator,
+    WanderingTrader,
+    Warden,
+    Witch,
+    Wither,
+    WitherSkeleton,
+    WitherSkull,
+    Wolf,
+    Zoglin,
+    Zombie,
+    ZombieHorse,
+    ZombieVillager,
+    ZombifiedPiglin,
+    Player,
+    FishingBobber,
 }
 
+const ALLAY_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:allay");
+const AREA_EFFECT_CLOUD_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:area_effect_cloud");
+const ARMOR_STAND_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:armor_stand");
+const ARROW_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:arrow");
+const AXOLOTL_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:axolotl");
+const BAT_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:bat");
+const BEE_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:bee");
+const BLAZE_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:blaze");
+const BLOCK_DISPLAY_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:block_display");
+const BOAT_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:boat");
+const CAMEL_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:camel");
+const CAT_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:cat");
+const CAVE_SPIDER_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:cave_spider");
+const CHEST_BOAT_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:chest_boat");
+const CHEST_MINECART_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:chest_minecart");
+const CHICKEN_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:chicken");
+const COD_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:cod");
+const COMMAND_BLOCK_MINECART_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:command_block_minecart");
 const COW_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:cow");
-const ZOMBIE_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:zombie");
+const CREEPER_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:creeper");
+const DOLPHIN_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:dolphin");
+const DONKEY_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:donkey");
+const DRAGON_FIREBALL_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:dragon_fireball");
+const DROWNED_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:drowned");
+const EGG_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:egg");
+const ELDER_GUARDIAN_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:elder_guardian");
+const END_CRYSTAL_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:end_crystal");
+const ENDER_DRAGON_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:ender_dragon");
+const ENDER_PEARL_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:ender_pearl");
+const ENDERMAN_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:enderman");
+const ENDERMITE_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:endermite");
+const EVOKER_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:evoker");
+const EVOKER_FANGS_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:evoker_fangs");
+const EXPERIENCE_BOTTLE_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:experience_bottle");
+const EXPERIENCE_ORB_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:experience_orb");
+const EYE_OF_ENDER_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:eye_of_ender");
+const FALLING_BLOCK_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:falling_block");
+const FIREWORK_ROCKET_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:firework_rocket");
+const FOX_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:fox");
+const FROG_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:frog");
+const FURNACE_MINECART_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:furnace_minecart");
+const GHAST_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:ghast");
+const GIANT_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:giant");
+const GLOW_ITEM_FRAME_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:glow_item_frame");
+const GLOW_SQUID_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:glow_squid");
+const GOAT_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:goat");
+const GUARDIAN_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:guardian");
+const HOGLIN_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:hoglin");
+const HOPPER_MINECART_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:hopper_minecart");
+const HORSE_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:horse");
+const HUSK_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:husk");
+const ILLUSIONER_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:illusioner");
+const INTERACTION_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:interaction");
+const IRON_GOLEM_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:iron_golem");
+const ITEM_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:item");
+const ITEM_DISPLAY_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:item_display");
+const ITEM_FRAME_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:item_frame");
+const FIREBALL_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:fireball");
+const LEASH_KNOT_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:leash_knot");
+const LIGHTNING_BOLT_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:lightning_bolt");
+const LLAMA_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:llama");
+const LLAMA_SPIT_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:llama_spit");
+const MAGMA_CUBE_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:magma_cube");
+const MARKER_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:marker");
+const MINECART_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:minecart");
+const MOOSHROOM_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:mooshroom");
+const MULE_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:mule");
+const OCELOT_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:ocelot");
+const PAINTING_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:painting");
+const PANDA_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:panda");
+const PARROT_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:parrot");
+const PHANTOM_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:phantom");
+const PIG_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:pig");
+const PIGLIN_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:piglin");
+const PIGLIN_BRUTE_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:piglin_brute");
+const PILLAGER_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:pillager");
+const POLAR_BEAR_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:polar_bear");
+const POTION_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:potion");
+const PUFFERFISH_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:pufferfish");
+const RABBIT_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:rabbit");
+const RAVAGER_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:ravager");
+const SALMON_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:salmon");
+const SHEEP_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:sheep");
+const SHULKER_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:shulker");
+const SHULKER_BULLET_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:shulker_bullet");
+const SILVERFISH_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:silverfish");
 const SKELETON_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:skeleton");
+const SKELETON_HORSE_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:skeleton_horse");
+const SLIME_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:slime");
+const SMALL_FIREBALL_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:small_fireball");
+const SNIFFER_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:sniffer");
+const SNOW_GOLEM_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:snow_golem");
+const SNOWBALL_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:snowball");
+const SPAWNER_MINECART_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:spawner_minecart");
+const SPECTRAL_ARROW_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:spectral_arrow");
+const SPIDER_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:spider");
+const SQUID_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:squid");
+const STRAY_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:stray");
+const STRIDER_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:strider");
+const TADPOLE_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:tadpole");
+const TEXT_DISPLAY_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:text_display");
+const TNT_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:tnt");
+const TNT_MINECART_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:tnt_minecart");
+const TRADER_LLAMA_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:trader_llama");
+const TRIDENT_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:trident");
+const TROPICAL_FISH_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:tropical_fish");
+const TURTLE_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:turtle");
+const VEX_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:vex");
+const VILLAGER_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:villager");
+const VINDICATOR_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:vindicator");
+const WANDERING_TRADER_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:wandering_trader");
+const WARDEN_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:warden");
+const WITCH_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:witch");
+const WITHER_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:wither");
+const WITHER_SKELETON_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:wither_skeleton");
+const WITHER_SKULL_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:wither_skull");
+const WOLF_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:wolf");
+const ZOGLIN_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:zoglin");
+const ZOMBIE_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:zombie");
+const ZOMBIE_HORSE_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:zombie_horse");
+const ZOMBIE_VILLAGER_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:zombie_villager");
+const ZOMBIFIED_PIGLIN_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:zombified_piglin");
+const PLAYER_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:player");
+const FISHING_BOBBER_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:fishing_bobber");
 
 impl EntityKind {
     pub fn network_id(self) -> i32 {
         match self {
+            EntityKind::Allay => ALLAY_ID as i32,
+            EntityKind::AreaEffectCloud => AREA_EFFECT_CLOUD_ID as i32,
+            EntityKind::ArmorStand => ARMOR_STAND_ID as i32,
+            EntityKind::Arrow => ARROW_ID as i32,
+            EntityKind::Axolotl => AXOLOTL_ID as i32,
+            EntityKind::Bat => BAT_ID as i32,
+            EntityKind::Bee => BEE_ID as i32,
+            EntityKind::Blaze => BLAZE_ID as i32,
+            EntityKind::BlockDisplay => BLOCK_DISPLAY_ID as i32,
+            EntityKind::Boat => BOAT_ID as i32,
+            EntityKind::Camel => CAMEL_ID as i32,
+            EntityKind::Cat => CAT_ID as i32,
+            EntityKind::CaveSpider => CAVE_SPIDER_ID as i32,
+            EntityKind::ChestBoat => CHEST_BOAT_ID as i32,
+            EntityKind::ChestMinecart => CHEST_MINECART_ID as i32,
+            EntityKind::Chicken => CHICKEN_ID as i32,
+            EntityKind::Cod => COD_ID as i32,
+            EntityKind::CommandBlockMinecart => COMMAND_BLOCK_MINECART_ID as i32,
             EntityKind::Cow => COW_ID as i32,
-            EntityKind::Zombie => ZOMBIE_ID as i32,
+            EntityKind::Creeper => CREEPER_ID as i32,
+            EntityKind::Dolphin => DOLPHIN_ID as i32,
+            EntityKind::Donkey => DONKEY_ID as i32,
+            EntityKind::DragonFireball => DRAGON_FIREBALL_ID as i32,
+            EntityKind::Drowned => DROWNED_ID as i32,
+            EntityKind::Egg => EGG_ID as i32,
+            EntityKind::ElderGuardian => ELDER_GUARDIAN_ID as i32,
+            EntityKind::EndCrystal => END_CRYSTAL_ID as i32,
+            EntityKind::EnderDragon => ENDER_DRAGON_ID as i32,
+            EntityKind::EnderPearl => ENDER_PEARL_ID as i32,
+            EntityKind::Enderman => ENDERMAN_ID as i32,
+            EntityKind::Endermite => ENDERMITE_ID as i32,
+            EntityKind::Evoker => EVOKER_ID as i32,
+            EntityKind::EvokerFangs => EVOKER_FANGS_ID as i32,
+            EntityKind::ExperienceBottle => EXPERIENCE_BOTTLE_ID as i32,
+            EntityKind::ExperienceOrb => EXPERIENCE_ORB_ID as i32,
+            EntityKind::EyeOfEnder => EYE_OF_ENDER_ID as i32,
+            EntityKind::FallingBlock => FALLING_BLOCK_ID as i32,
+            EntityKind::FireworkRocket => FIREWORK_ROCKET_ID as i32,
+            EntityKind::Fox => FOX_ID as i32,
+            EntityKind::Frog => FROG_ID as i32,
+            EntityKind::FurnaceMinecart => FURNACE_MINECART_ID as i32,
+            EntityKind::Ghast => GHAST_ID as i32,
+            EntityKind::Giant => GIANT_ID as i32,
+            EntityKind::GlowItemFrame => GLOW_ITEM_FRAME_ID as i32,
+            EntityKind::GlowSquid => GLOW_SQUID_ID as i32,
+            EntityKind::Goat => GOAT_ID as i32,
+            EntityKind::Guardian => GUARDIAN_ID as i32,
+            EntityKind::Hoglin => HOGLIN_ID as i32,
+            EntityKind::HopperMinecart => HOPPER_MINECART_ID as i32,
+            EntityKind::Horse => HORSE_ID as i32,
+            EntityKind::Husk => HUSK_ID as i32,
+            EntityKind::Illusioner => ILLUSIONER_ID as i32,
+            EntityKind::Interaction => INTERACTION_ID as i32,
+            EntityKind::IronGolem => IRON_GOLEM_ID as i32,
+            EntityKind::Item => ITEM_ID as i32,
+            EntityKind::ItemDisplay => ITEM_DISPLAY_ID as i32,
+            EntityKind::ItemFrame => ITEM_FRAME_ID as i32,
+            EntityKind::Fireball => FIREBALL_ID as i32,
+            EntityKind::LeashKnot => LEASH_KNOT_ID as i32,
+            EntityKind::LightningBolt => LIGHTNING_BOLT_ID as i32,
+            EntityKind::Llama => LLAMA_ID as i32,
+            EntityKind::LlamaSpit => LLAMA_SPIT_ID as i32,
+            EntityKind::MagmaCube => MAGMA_CUBE_ID as i32,
+            EntityKind::Marker => MARKER_ID as i32,
+            EntityKind::Minecart => MINECART_ID as i32,
+            EntityKind::Mooshroom => MOOSHROOM_ID as i32,
+            EntityKind::Mule => MULE_ID as i32,
+            EntityKind::Ocelot => OCELOT_ID as i32,
+            EntityKind::Painting => PAINTING_ID as i32,
+            EntityKind::Panda => PANDA_ID as i32,
+            EntityKind::Parrot => PARROT_ID as i32,
+            EntityKind::Phantom => PHANTOM_ID as i32,
+            EntityKind::Pig => PIG_ID as i32,
+            EntityKind::Piglin => PIGLIN_ID as i32,
+            EntityKind::PiglinBrute => PIGLIN_BRUTE_ID as i32,
+            EntityKind::Pillager => PILLAGER_ID as i32,
+            EntityKind::PolarBear => POLAR_BEAR_ID as i32,
+            EntityKind::Potion => POTION_ID as i32,
+            EntityKind::Pufferfish => PUFFERFISH_ID as i32,
+            EntityKind::Rabbit => RABBIT_ID as i32,
+            EntityKind::Ravager => RAVAGER_ID as i32,
+            EntityKind::Salmon => SALMON_ID as i32,
+            EntityKind::Sheep => SHEEP_ID as i32,
+            EntityKind::Shulker => SHULKER_ID as i32,
+            EntityKind::ShulkerBullet => SHULKER_BULLET_ID as i32,
+            EntityKind::Silverfish => SILVERFISH_ID as i32,
             EntityKind::Skeleton => SKELETON_ID as i32,
+            EntityKind::SkeletonHorse => SKELETON_HORSE_ID as i32,
+            EntityKind::Slime => SLIME_ID as i32,
+            EntityKind::SmallFireball => SMALL_FIREBALL_ID as i32,
+            EntityKind::Sniffer => SNIFFER_ID as i32,
+            EntityKind::SnowGolem => SNOW_GOLEM_ID as i32,
+            EntityKind::Snowball => SNOWBALL_ID as i32,
+            EntityKind::SpawnerMinecart => SPAWNER_MINECART_ID as i32,
+            EntityKind::SpectralArrow => SPECTRAL_ARROW_ID as i32,
+            EntityKind::Spider => SPIDER_ID as i32,
+            EntityKind::Squid => SQUID_ID as i32,
+            EntityKind::Stray => STRAY_ID as i32,
+            EntityKind::Strider => STRIDER_ID as i32,
+            EntityKind::Tadpole => TADPOLE_ID as i32,
+            EntityKind::TextDisplay => TEXT_DISPLAY_ID as i32,
+            EntityKind::Tnt => TNT_ID as i32,
+            EntityKind::TntMinecart => TNT_MINECART_ID as i32,
+            EntityKind::TraderLlama => TRADER_LLAMA_ID as i32,
+            EntityKind::Trident => TRIDENT_ID as i32,
+            EntityKind::TropicalFish => TROPICAL_FISH_ID as i32,
+            EntityKind::Turtle => TURTLE_ID as i32,
+            EntityKind::Vex => VEX_ID as i32,
+            EntityKind::Villager => VILLAGER_ID as i32,
+            EntityKind::Vindicator => VINDICATOR_ID as i32,
+            EntityKind::WanderingTrader => WANDERING_TRADER_ID as i32,
+            EntityKind::Warden => WARDEN_ID as i32,
+            EntityKind::Witch => WITCH_ID as i32,
+            EntityKind::Wither => WITHER_ID as i32,
+            EntityKind::WitherSkeleton => WITHER_SKELETON_ID as i32,
+            EntityKind::WitherSkull => WITHER_SKULL_ID as i32,
+            EntityKind::Wolf => WOLF_ID as i32,
+            EntityKind::Zoglin => ZOGLIN_ID as i32,
+            EntityKind::Zombie => ZOMBIE_ID as i32,
+            EntityKind::ZombieHorse => ZOMBIE_HORSE_ID as i32,
+            EntityKind::ZombieVillager => ZOMBIE_VILLAGER_ID as i32,
+            EntityKind::ZombifiedPiglin => ZOMBIFIED_PIGLIN_ID as i32,
+            EntityKind::Player => PLAYER_ID as i32,
+            EntityKind::FishingBobber => FISHING_BOBBER_ID as i32,
         }
-    }
-}
-
-#[derive(TypeName, Component, Debug, Clone)]
-pub struct Mob {
-    pub kind: EntityKind,
-}
-
-#[derive(TypeName, Component, Debug, Default)]
-pub struct PendingSpawn;
-
-#[derive(TypeName, Component, Debug, Clone, Eq, PartialEq)]
-pub enum AIGoal {
-    Idle,
-    Wander,
-}
-
-impl Default for AIGoal {
-    fn default() -> Self {
-        AIGoal::Idle
-    }
-}
-
-/// Basic interface for AI goals.
-pub trait Goal {
-    /// Returns `true` when the goal has been achieved.
-    fn is_complete(&self, pos: GridPos) -> bool;
-}
-
-/// A simple goal that moves an entity to a target position.
-#[derive(Debug, Clone, Copy)]
-pub struct MoveToGoal {
-    pub target: GridPos,
-}
-
-impl Goal for MoveToGoal {
-    fn is_complete(&self, pos: GridPos) -> bool {
-        pos == self.target
-    }
-}
-
-/// Trait representing a pathfinding strategy.
-pub trait Pathfinder {
-    type Node: Eq + Hash + Copy;
-
-    fn find_path(
-        &self,
-        start: Self::Node,
-        goal: Self::Node,
-        is_walkable: impl Fn(Self::Node) -> bool,
-    ) -> Option<Vec<Self::Node>>;
-}
-
-/// 2D grid position used by the default pathfinder.
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
-pub struct GridPos {
-    pub x: i32,
-    pub y: i32,
-}
-
-impl GridPos {
-    fn neighbors(self) -> [GridPos; 4] {
-        [
-            GridPos {
-                x: self.x + 1,
-                y: self.y,
-            },
-            GridPos {
-                x: self.x - 1,
-                y: self.y,
-            },
-            GridPos {
-                x: self.x,
-                y: self.y + 1,
-            },
-            GridPos {
-                x: self.x,
-                y: self.y - 1,
-            },
-        ]
-    }
-
-    fn manhattan(self, other: GridPos) -> i32 {
-        (self.x - other.x).abs() + (self.y - other.y).abs()
-    }
-}
-
-#[derive(Copy, Clone, Eq, PartialEq)]
-struct Node {
-    pos: GridPos,
-    score: i32,
-}
-
-impl Ord for Node {
-    fn cmp(&self, other: &Self) -> Ordering {
-        // Reverse order for min-heap behavior.
-        other
-            .score
-            .cmp(&self.score)
-            .then_with(|| self.pos.x.cmp(&other.pos.x))
-            .then_with(|| self.pos.y.cmp(&other.pos.y))
-    }
-}
-
-impl PartialOrd for Node {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-/// A* pathfinder operating on a 2D grid.
-pub struct AStarPathfinder;
-
-impl Pathfinder for AStarPathfinder {
-    type Node = GridPos;
-
-    fn find_path(
-        &self,
-        start: GridPos,
-        goal: GridPos,
-        is_walkable: impl Fn(GridPos) -> bool,
-    ) -> Option<Vec<GridPos>> {
-        let mut open = BinaryHeap::new();
-        open.push(Node {
-            pos: start,
-            score: 0,
-        });
-
-        let mut came_from: HashMap<GridPos, GridPos> = HashMap::new();
-        let mut g_score: HashMap<GridPos, i32> = HashMap::new();
-        g_score.insert(start, 0);
-
-        while let Some(Node { pos, .. }) = open.pop() {
-            if pos == goal {
-                let mut path = vec![pos];
-                let mut current = pos;
-                while let Some(&prev) = came_from.get(&current) {
-                    path.push(prev);
-                    current = prev;
-                }
-                path.reverse();
-                return Some(path);
-            }
-
-            let current_g = *g_score.get(&pos).unwrap_or(&i32::MAX);
-            for neighbor in pos.neighbors() {
-                if !is_walkable(neighbor) {
-                    continue;
-                }
-                let tentative_g = current_g + 1;
-                if tentative_g < *g_score.get(&neighbor).unwrap_or(&i32::MAX) {
-                    came_from.insert(neighbor, pos);
-                    g_score.insert(neighbor, tentative_g);
-                    let f_score = tentative_g + neighbor.manhattan(goal);
-                    open.push(Node {
-                        pos: neighbor,
-                        score: f_score,
-                    });
-                }
-            }
-        }
-
-        None
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn astar_finds_simple_path() {
-        let pf = AStarPathfinder;
-        let obstacles = [GridPos { x: 1, y: 0 }];
-        let path = pf
-            .find_path(GridPos { x: 0, y: 0 }, GridPos { x: 2, y: 0 }, |p| {
-                !obstacles.contains(&p)
-            })
-            .expect("Path should be found");
-        assert_eq!(path.first(), Some(&GridPos { x: 0, y: 0 }));
-        assert_eq!(path.last(), Some(&GridPos { x: 2, y: 0 }));
-        assert!(path.len() > 2); // Must route around the obstacle
     }
 }

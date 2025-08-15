@@ -7,10 +7,11 @@ use serde::{Deserialize, Serialize};
 use tracing::error;
 
 use crate::ai::{AIGoal, EntityKind, Mob, PendingSpawn};
+use crate::attributes::attributes_for;
 use crate::collisions::bounds::CollisionBounds;
 use crate::entities::spawn_rules::{self, SpawnRule};
 use crate::identity::entity_id::EntityId;
-use crate::movement::Movement;
+use crate::movement::{Movement, Speed};
 use crate::transform::position::Position;
 use crate::transform::rotation::Rotation;
 use crate::furnace::{furnace_tick, Furnace};
@@ -67,12 +68,15 @@ pub fn spawn_entities_from_biomes(
     let rules = spawn_rules::rules_for_biome(biome);
     if let Some(kind) = select_weighted(rules) {
         let id = EntityId::new(rand::random::<u128>());
+        let attrs = attributes_for(kind);
         cmd.spawn((
             id,
             Mob { kind },
+            attrs.health,
             Position::default(),
             Rotation::default(),
             Movement::default(),
+            attrs.speed,
             CollisionBounds {
                 x_offset_start: -0.3,
                 x_offset_end: 0.3,

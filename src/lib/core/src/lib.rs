@@ -8,6 +8,7 @@ pub mod conn;
 pub mod entities;
 pub mod furnace;
 pub mod brewing;
+pub mod attributes;
 pub mod health;
 pub mod combat;
 pub mod effects;

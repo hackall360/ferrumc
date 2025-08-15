@@ -25,6 +25,19 @@ impl Health {
         }
     }
 
+    /// Creates a new [`Health`] component with the given stats.
+    ///
+    /// This is useful for initializing entities with predefined
+    /// health, armor and regeneration rate values.
+    pub fn with_attributes(max_hearts: f32, armor: f32, regen_rate: f32) -> Self {
+        Self {
+            hearts: max_hearts,
+            max_hearts,
+            armor,
+            regen_rate,
+        }
+    }
+
     /// Applies raw damage to the entity, reduced by its armor value.
     pub fn damage(&mut self, amount: f32) {
         let dmg = (amount - self.armor).max(0.0);

@@ -2,7 +2,13 @@ use bevy_ecs::prelude::Component;
 use ferrumc_world::chunk_format::Chunk;
 use typename::TypeName;
 
-use crate::{collisions::block::block_bounds, transform::position::Position};
+use crate::{
+    collisions::{
+        bounds::CollisionBounds,
+        world::{for_each_block_in_bounds, resolve_block_collisions},
+    },
+    transform::position::Position,
+};
 
 /// Base movement speed for an entity.
 #[derive(TypeName, Component, Debug, Clone, Copy)]
@@ -19,11 +25,18 @@ pub struct Movement {
     pub vx: f64,
     pub vy: f64,
     pub vz: f64,
+    /// Whether the entity is currently sneaking.
+    pub sneaking: bool,
 }
 
 impl Movement {
     pub fn new(vx: f64, vy: f64, vz: f64) -> Self {
-        Self { vx, vy, vz }
+        Self {
+            vx,
+            vy,
+            vz,
+            sneaking: false,
+        }
     }
 
     /// Apply gravity based on whether the entity is in a fluid.
@@ -65,38 +78,65 @@ impl Movement {
     }
 
     /// Tick movement, applying gravity, drag, friction and flow forces.
-    pub fn tick(&mut self, position: &mut Position, chunk: &Chunk) {
-        let in_fluid = is_in_fluid(chunk, position);
-        let on_ground = is_on_ground(chunk, position);
-        self.apply_gravity(in_fluid);
+    pub fn tick(&mut self, position: &mut Position, bounds: &CollisionBounds, chunk: &Chunk) {
+        let in_fluid = is_in_fluid(chunk, position, bounds);
+        let climbing = is_touching_climbable(chunk, position, bounds);
+        if !climbing {
+            self.apply_gravity(in_fluid);
+        } else {
+            self.vy = self.vy.clamp(-0.15, 0.2);
+        }
         self.apply_water_flow(in_fluid);
         self.apply_drag(in_fluid);
+        if self.sneaking {
+            self.vx *= 0.3;
+            self.vz *= 0.3;
+        }
+        if climbing {
+            self.vx *= 0.6;
+            self.vz *= 0.6;
+        }
+        let on_ground = resolve_block_collisions(position, bounds, self, chunk);
         self.apply_friction(on_ground);
-        position.x += self.vx;
-        position.y += self.vy;
-        position.z += self.vz;
     }
 }
 
 /// Determine if the entity is in a fluid block such as water.
-fn is_in_fluid(chunk: &Chunk, position: &Position) -> bool {
-    let bx = position.x.floor() as i32;
-    let by = position.y.floor() as i32;
-    let bz = position.z.floor() as i32;
-    if let Ok(block) = chunk.get_block(bx, by, bz) {
-        if let Some(data) = block.to_block_data() {
-            return data.name.contains("water") || data.name.contains("lava");
+fn is_in_fluid(chunk: &Chunk, position: &Position, bounds: &CollisionBounds) -> bool {
+    let mut found = false;
+    for_each_block_in_bounds(chunk, position, bounds, |x, y, z| {
+        if found {
+            return;
         }
-    }
-    false
+        if let Ok(block) = chunk.get_block(x, y, z) {
+            if let Some(data) = block.to_block_data() {
+                if data.name.contains("water") || data.name.contains("lava") {
+                    found = true;
+                }
+            }
+        }
+        // Blocks outside the chunk are treated as empty space.
+    });
+    found
 }
 
-/// Basic ground check: returns true if the block directly below has collision bounds.
-fn is_on_ground(chunk: &Chunk, position: &Position) -> bool {
-    let bx = position.x.floor() as i32;
-    let by = position.y.floor() as i32 - 1;
-    let bz = position.z.floor() as i32;
-    block_bounds(chunk, bx, by, bz).is_some()
+/// Check if the entity is touching a climbable block such as a ladder or vine.
+fn is_touching_climbable(chunk: &Chunk, position: &Position, bounds: &CollisionBounds) -> bool {
+    let mut found = false;
+    for_each_block_in_bounds(chunk, position, bounds, |x, y, z| {
+        if found {
+            return;
+        }
+        if let Ok(block) = chunk.get_block(x, y, z) {
+            if let Some(data) = block.to_block_data() {
+                if data.name.contains("ladder") || data.name.contains("vine") {
+                    found = true;
+                }
+            }
+        }
+        // Missing blocks simply don't provide climbable surfaces.
+    });
+    found
 }
 
 #[cfg(test)]
@@ -104,12 +144,23 @@ mod tests {
     use super::*;
     use ferrumc_world::vanilla_chunk_format::BlockData;
 
+    fn entity_bounds() -> CollisionBounds {
+        CollisionBounds {
+            x_offset_start: -0.3,
+            x_offset_end: 0.3,
+            y_offset_start: 0.0,
+            y_offset_end: 1.8,
+            z_offset_start: -0.3,
+            z_offset_end: 0.3,
+        }
+    }
+
     #[test]
     fn falling_decreases_height() {
         let chunk = Chunk::new(0, 0, "overworld".to_string());
         let mut position = Position::new(0.0, 2.0, 0.0);
         let mut movement = Movement::default();
-        movement.tick(&mut position, &chunk);
+        movement.tick(&mut position, &entity_bounds(), &chunk);
         assert!(position.y < 2.0);
     }
 
@@ -119,7 +170,7 @@ mod tests {
         let mut position = Position::default();
         let mut movement = Movement::new(0.0, 0.42, 0.0);
         for _ in 0..10 {
-            movement.tick(&mut position, &chunk);
+            movement.tick(&mut position, &entity_bounds(), &chunk);
         }
         assert!(movement.vy < 0.0);
     }
@@ -137,8 +188,24 @@ mod tests {
         chunk.set_block(0, 0, 0, water).unwrap();
         let mut position = Position::new(0.5, 0.5, 0.5);
         let mut movement = Movement::new(0.2, -0.1, 0.0);
-        movement.tick(&mut position, &chunk);
+        movement.tick(&mut position, &entity_bounds(), &chunk);
         assert!(movement.vy > -0.1);
         assert!(movement.vx.abs() < 0.2);
+    }
+
+    #[test]
+    fn collisions_stop_on_solid_blocks() {
+        let mut chunk = Chunk::new(0, 0, "overworld".to_string());
+        let stone = BlockData {
+            name: "minecraft:stone".to_string(),
+            properties: None,
+        }
+        .to_block_id();
+        chunk.set_block(0, 0, 0, stone).unwrap();
+        let mut position = Position::new(0.5, 1.0, 0.5);
+        let mut movement = Movement::new(0.0, -1.0, 0.0);
+        movement.tick(&mut position, &entity_bounds(), &chunk);
+        assert!(position.y >= 1.0);
+        assert_eq!(movement.vy, 0.0);
     }
 }

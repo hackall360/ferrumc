@@ -59,11 +59,7 @@ impl TickManager {
         }
 
         // Handle random ticks – process all positions deterministically
-        let positions: Vec<BlockPos> = self
-            .random
-            .values()
-            .flat_map(|v| v.clone())
-            .collect();
+        let positions: Vec<BlockPos> = self.random.values().flat_map(|v| v.clone()).collect();
         for pos in positions {
             let block_id = world.get_block_and_fetch(pos.x, pos.y, pos.z, &pos.dimension)?;
             tick_block(world, self, &pos, block_id)?;
@@ -85,7 +81,12 @@ impl TickManager {
     }
 }
 
-fn tick_block(world: &World, tm: &mut TickManager, pos: &BlockPos, block: BlockId) -> Result<(), WorldError> {
+fn tick_block(
+    world: &World,
+    tm: &mut TickManager,
+    pos: &BlockPos,
+    block: BlockId,
+) -> Result<(), WorldError> {
     if let Some(data) = block.to_block_data() {
         match data.name.as_str() {
             "minecraft:water" => water_tick(world, tm, pos)?,
@@ -108,6 +109,33 @@ fn tick_block(world: &World, tm: &mut TickManager, pos: &BlockPos, block: BlockI
                     .unwrap_or(Direction::North);
                 redstone::tick_repeater(world, tm, pos, delay, facing, block)?
             }
+            "minecraft:comparator" => {
+                let facing = data
+                    .properties
+                    .as_ref()
+                    .and_then(|p| p.get("facing"))
+                    .and_then(|v| Direction::from_str(v))
+                    .unwrap_or(Direction::North);
+                redstone::tick_comparator(world, tm, pos, facing, block)?
+            }
+            "minecraft:observer" => {
+                let facing = data
+                    .properties
+                    .as_ref()
+                    .and_then(|p| p.get("facing"))
+                    .and_then(|v| Direction::from_str(v))
+                    .unwrap_or(Direction::North);
+                redstone::tick_observer(world, tm, pos, facing, block)?
+            }
+            "minecraft:piston" | "minecraft:sticky_piston" => {
+                let facing = data
+                    .properties
+                    .as_ref()
+                    .and_then(|p| p.get("facing"))
+                    .and_then(|v| Direction::from_str(v))
+                    .unwrap_or(Direction::North);
+                redstone::tick_piston(world, tm, pos, facing, block)?
+            }
             _ => {}
         }
     }
@@ -129,7 +157,12 @@ fn water_tick(world: &World, tm: &mut TickManager, pos: &BlockPos) -> Result<(),
             };
             world.set_block_and_fetch(nx, ny, nz, &pos.dimension, water.clone())?;
             tm.schedule(ScheduledTick {
-                pos: BlockPos { x: nx, y: ny, z: nz, dimension: pos.dimension.clone() },
+                pos: BlockPos {
+                    x: nx,
+                    y: ny,
+                    z: nz,
+                    dimension: pos.dimension.clone(),
+                },
                 block: water.to_block_id(),
                 delay: 1,
             });
@@ -138,7 +171,11 @@ fn water_tick(world: &World, tm: &mut TickManager, pos: &BlockPos) -> Result<(),
     Ok(())
 }
 
-fn crop_tick(world: &World, pos: &BlockPos, data: &crate::vanilla_chunk_format::BlockData) -> Result<(), WorldError> {
+fn crop_tick(
+    world: &World,
+    pos: &BlockPos,
+    data: &crate::vanilla_chunk_format::BlockData,
+) -> Result<(), WorldError> {
     let mut props = data.properties.clone().unwrap_or_default();
     let age = props
         .get("age")
@@ -160,14 +197,24 @@ pub fn schedule_block_tick(world: &World, x: i32, y: i32, z: i32, dimension: &st
     let block = world
         .get_block_and_fetch(x, y, z, dimension)
         .unwrap_or_default();
-    let pos = BlockPos { x, y, z, dimension: dimension.to_string() };
+    let pos = BlockPos {
+        x,
+        y,
+        z,
+        dimension: dimension.to_string(),
+    };
     let mut guard = world.tick_manager.lock().unwrap();
     guard.schedule(ScheduledTick { pos, block, delay });
 }
 
 /// Helper to register a position for random ticks.
 pub fn schedule_random_tick(world: &World, x: i32, y: i32, z: i32, dimension: &str) {
-    let pos = BlockPos { x, y, z, dimension: dimension.to_string() };
+    let pos = BlockPos {
+        x,
+        y,
+        z,
+        dimension: dimension.to_string(),
+    };
     let mut guard = world.tick_manager.lock().unwrap();
     guard.schedule_random(pos);
 }

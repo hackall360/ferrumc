@@ -1,7 +1,7 @@
 use crate::ai::EntityKind;
 
 /// Dimension an entity is allowed to spawn in.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Dimension {
     Overworld,
     Nether,
@@ -9,7 +9,7 @@ pub enum Dimension {
 }
 
 /// Describes the spawning conditions for an [`EntityKind`].
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct SpawnRule {
     pub kind: EntityKind,
     pub weight: u32,

@@ -4,6 +4,16 @@ use typename::TypeName;
 
 use crate::{collisions::block::block_bounds, transform::position::Position};
 
+/// Base movement speed for an entity.
+#[derive(TypeName, Component, Debug, Clone, Copy)]
+pub struct Speed(pub f64);
+
+impl Default for Speed {
+    fn default() -> Self {
+        Speed(0.1)
+    }
+}
+
 #[derive(TypeName, Component, Debug, Clone, Copy, Default)]
 pub struct Movement {
     pub vx: f64,

@@ -109,6 +109,13 @@ our [Discord server](https://discord.gg/qT5J8EMjwk) for help or to discuss the p
     </li>
 </ul>
 
+## Entity system
+
+FerrumC's gameplay revolves around extensible entities. The [entity guide](docs/entities.md)
+explains how entity types are registered, how default attributes and AI goals are attached,
+and how biome-based spawn rules work. It also includes examples for adding new entities or
+modifying existing behaviour.
+
 ## Goals
 
 - **Performance**: FerrumC aims to be the fastest Minecraft server implementation available, with a focus on low latency

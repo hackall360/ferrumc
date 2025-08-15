@@ -1,3 +1,12 @@
+use bevy_ecs::prelude::Component;
+use typename::TypeName;
+
+use crate::transform::position::Position;
+
+mod passive;
+mod hostile;
+mod neutral;
+
 #[derive(TypeName, Component, Debug, Clone, Copy, Eq, PartialEq)]
 pub enum EntityKind {
     Allay,
@@ -124,6 +133,39 @@ pub enum EntityKind {
     ZombifiedPiglin,
     Player,
     FishingBobber,
+}
+
+#[derive(TypeName, Component, Debug, Clone)]
+pub enum AIGoal {
+    Idle,
+    Wander,
+    Graze,
+    Flee { from: Position },
+    Target { target: Position },
+    Attack { target: Position },
+    Trade,
+    Defend { target: Position },
+}
+
+#[derive(TypeName, Component, Debug, Clone, Copy)]
+pub struct Mob {
+    pub kind: EntityKind,
+}
+
+#[derive(TypeName, Component, Debug, Default, Clone, Copy)]
+pub struct PendingSpawn;
+
+pub fn default_goals(kind: EntityKind) -> Vec<AIGoal> {
+    if let Some(goals) = passive::goals(kind) {
+        return goals;
+    }
+    if let Some(goals) = hostile::goals(kind) {
+        return goals;
+    }
+    if let Some(goals) = neutral::goals(kind) {
+        return goals;
+    }
+    vec![AIGoal::Idle]
 }
 
 const ALLAY_ID: u64 = get_registry_entry!("minecraft:entity_type.entries.minecraft:allay");

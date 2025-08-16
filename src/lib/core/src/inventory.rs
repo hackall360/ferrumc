@@ -147,6 +147,108 @@ impl Inventory {
         }
         ItemUseResult::NoItem
     }
+
+    /// Simple smithing operation: combines base and addition into output.
+    pub fn smith(&mut self, base: usize, addition: usize, output: usize) -> bool {
+        let (Some(base_slot), Some(add_slot)) = (
+            self.get_slot_mut(base),
+            self.get_slot_mut(addition),
+        ) else {
+            return false;
+        };
+        let (Some(base_stack), Some(add_stack)) = (base_slot.as_mut(), add_slot.as_mut()) else {
+            return false;
+        };
+
+        base_stack.count = base_stack.count.saturating_sub(1);
+        add_stack.count = add_stack.count.saturating_sub(1);
+        if base_stack.count == 0 {
+            *base_slot = None;
+        }
+        if add_stack.count == 0 {
+            *add_slot = None;
+        }
+
+        let mut result = base_stack.clone();
+        result.count = 1;
+        result.nbt.get_or_insert(vec![]).push(1);
+        self.set_slot(output, Some(result));
+        true
+    }
+
+    /// Placeholder brewing operation using ingredient and potion slots.
+    pub fn brew(&mut self, ingredient: usize, potion_slots: [usize; 3]) -> bool {
+        let Some(ing_slot) = self.get_slot_mut(ingredient) else {
+            return false;
+        };
+        let Some(ing_stack) = ing_slot.as_mut() else {
+            return false;
+        };
+        let mut processed = false;
+        for &idx in potion_slots.iter() {
+            if let Some(Some(potion)) = self.get_slot_mut(idx).map(|s| s.as_mut()) {
+                potion.nbt.get_or_insert(vec![]).push(2);
+                processed = true;
+            }
+        }
+        if processed {
+            ing_stack.count = ing_stack.count.saturating_sub(1);
+            if ing_stack.count == 0 {
+                *ing_slot = None;
+            }
+        }
+        processed
+    }
+
+    /// Basic enchanting: consume lapis and add marker to item.
+    pub fn enchant(&mut self, item: usize, lapis: usize, output: usize) -> bool {
+        let (Some(item_slot), Some(lapis_slot)) =
+            (self.get_slot_mut(item), self.get_slot_mut(lapis))
+        else {
+            return false;
+        };
+        let (Some(item_stack), Some(lapis_stack)) =
+            (item_slot.as_mut(), lapis_slot.as_mut())
+        else {
+            return false;
+        };
+        lapis_stack.count = lapis_stack.count.saturating_sub(1);
+        if lapis_stack.count == 0 {
+            *lapis_slot = None;
+        }
+        let mut result = item_stack.clone();
+        result.nbt.get_or_insert(vec![]).push(3);
+        self.set_slot(output, Some(result));
+        item_stack.count = item_stack.count.saturating_sub(1);
+        if item_stack.count == 0 {
+            *item_slot = None;
+        }
+        true
+    }
+
+    /// Simple anvil operation that merges two stacks.
+    pub fn anvil(&mut self, left: usize, right: usize, output: usize) -> bool {
+        let (Some(l_slot), Some(r_slot)) =
+            (self.get_slot_mut(left), self.get_slot_mut(right))
+        else {
+            return false;
+        };
+        let (Some(left_stack), Some(right_stack)) = (l_slot.as_mut(), r_slot.as_mut()) else {
+            return false;
+        };
+        if left_stack.item != right_stack.item {
+            return false;
+        }
+        let mut result = left_stack.clone();
+        result.count = left_stack
+            .count
+            .saturating_add(right_stack.count)
+            .min(left_stack.max_stack_size);
+        *l_slot = None;
+        *r_slot = None;
+        self.set_slot(output, Some(result));
+        true
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -163,6 +265,23 @@ impl CraftingGrid {
         if index < self.slots.len() {
             self.slots[index] = slot;
         }
+    }
+
+    /// Returns true if the current grid arrangement matches any known recipe.
+    pub fn is_valid(&self) -> bool {
+        RECIPES.iter().any(|recipe| {
+            if recipe.pattern.len() != self.slots.len() {
+                return false;
+            }
+            recipe.pattern.iter().enumerate().all(|(i, r)| match r {
+                Some(expected) => self.slots[i]
+                    .as_ref()
+                    .map(|s| s.item)
+                    .filter(|id| id == expected)
+                    .is_some(),
+                None => self.slots[i].is_none(),
+            })
+        })
     }
 
     pub fn craft(&mut self) -> Option<ItemStack> {

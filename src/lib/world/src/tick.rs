@@ -1,7 +1,9 @@
 use crate::block_id::BlockId;
 use crate::errors::WorldError;
 use crate::redstone::{self, Direction};
+use crate::vanilla_chunk_format::BlockData;
 use crate::World;
+use rand::Rng;
 use std::collections::{BTreeMap, HashMap, VecDeque};
 
 /// Position of a block in the world.
@@ -21,10 +23,16 @@ pub struct ScheduledTick {
     pub delay: u32,
 }
 
+#[derive(Clone, Debug)]
+pub struct RandomTick {
+    pub pos: BlockPos,
+    pub chance: f32,
+}
+
 #[derive(Default)]
 pub struct TickManager {
     pub scheduled: HashMap<(i32, i32, String), VecDeque<ScheduledTick>>,
-    pub random: HashMap<(i32, i32, String), Vec<BlockPos>>,
+    pub random: HashMap<(i32, i32, String), Vec<RandomTick>>,
 }
 
 impl TickManager {
@@ -33,9 +41,12 @@ impl TickManager {
         self.scheduled.entry(key).or_default().push_back(tick);
     }
 
-    pub fn schedule_random(&mut self, pos: BlockPos) {
+    pub fn schedule_random(&mut self, pos: BlockPos, chance: f32) {
         let key = (pos.x >> 4, pos.z >> 4, pos.dimension.clone());
-        self.random.entry(key).or_default().push(pos);
+        self.random
+            .entry(key)
+            .or_default()
+            .push(RandomTick { pos, chance });
     }
 
     pub fn tick_world(&mut self, world: &World) -> Result<(), WorldError> {
@@ -58,11 +69,15 @@ impl TickManager {
             tick_block(world, self, &tick.pos, tick.block)?;
         }
 
-        // Handle random ticks – process all positions deterministically
-        let positions: Vec<BlockPos> = self.random.values().flat_map(|v| v.clone()).collect();
-        for pos in positions {
-            let block_id = world.get_block_and_fetch(pos.x, pos.y, pos.z, &pos.dimension)?;
-            tick_block(world, self, &pos, block_id)?;
+        // Handle random ticks – trigger positions based on probability
+        let mut rng = rand::rng();
+        let positions: Vec<RandomTick> = self.random.values().flat_map(|v| v.clone()).collect();
+        for rt in positions {
+            if rng.random::<f32>() < rt.chance {
+                let block_id =
+                    world.get_block_and_fetch(rt.pos.x, rt.pos.y, rt.pos.z, &rt.pos.dimension)?;
+                tick_block(world, self, &rt.pos, block_id)?;
+            }
         }
         Ok(())
     }
@@ -91,6 +106,9 @@ fn tick_block(
         match data.name.as_str() {
             "minecraft:water" => water_tick(world, tm, pos)?,
             "minecraft:wheat" => crop_tick(world, pos, &data)?,
+            name if name.ends_with("_sapling") => sapling_tick(world, pos, &data)?,
+            name if name.ends_with("_leaves") => leaves_tick(world, pos)?,
+            "minecraft:farmland" => farmland_tick(world, pos, &data)?,
             "minecraft:redstone_torch" | "minecraft:redstone_wall_torch" => {
                 redstone::tick_torch(world, tm, pos, block)?
             }
@@ -192,6 +210,110 @@ fn crop_tick(
     Ok(())
 }
 
+fn sapling_tick(world: &World, pos: &BlockPos, data: &BlockData) -> Result<(), WorldError> {
+    let mut props = data.properties.clone().unwrap_or_default();
+    let stage = props
+        .get("stage")
+        .and_then(|v| v.parse::<u32>().ok())
+        .unwrap_or(0);
+    if stage == 0 {
+        props.insert("stage".to_string(), "1".to_string());
+        let new_data = BlockData {
+            name: data.name.clone(),
+            properties: Some(props),
+        };
+        world.set_block_and_fetch(pos.x, pos.y, pos.z, &pos.dimension, new_data)?;
+    } else {
+        let log = BlockData {
+            name: "minecraft:oak_log".to_string(),
+            properties: None,
+        };
+        world.set_block_and_fetch(pos.x, pos.y, pos.z, &pos.dimension, log)?;
+    }
+    Ok(())
+}
+
+fn leaves_tick(world: &World, pos: &BlockPos) -> Result<(), WorldError> {
+    let mut has_log = false;
+    'outer: for dx in -1..=1 {
+        for dy in -1..=1 {
+            for dz in -1..=1 {
+                let block_id = world.get_block_and_fetch(
+                    pos.x + dx,
+                    pos.y + dy,
+                    pos.z + dz,
+                    &pos.dimension,
+                )?;
+                if let Some(data) = block_id.to_block_data() {
+                    if data.name.ends_with("_log") {
+                        has_log = true;
+                        break 'outer;
+                    }
+                }
+            }
+        }
+    }
+    if !has_log {
+        let air = BlockData {
+            name: "minecraft:air".to_string(),
+            properties: None,
+        };
+        world.set_block_and_fetch(pos.x, pos.y, pos.z, &pos.dimension, air)?;
+    }
+    Ok(())
+}
+
+fn farmland_tick(world: &World, pos: &BlockPos, data: &BlockData) -> Result<(), WorldError> {
+    let mut hydrated = false;
+    'outer: for dx in -4..=4 {
+        for dz in -4..=4 {
+            let block_id =
+                world.get_block_and_fetch(pos.x + dx, pos.y, pos.z + dz, &pos.dimension)?;
+            if let Some(b) = block_id.to_block_data() {
+                if b.name == "minecraft:water" {
+                    hydrated = true;
+                    break 'outer;
+                }
+            }
+        }
+    }
+    let mut props = data.properties.clone().unwrap_or_default();
+    let moisture = props
+        .get("moisture")
+        .and_then(|v| v.parse::<u32>().ok())
+        .unwrap_or(0);
+    if hydrated {
+        if moisture < 7 {
+            props.insert("moisture".to_string(), "7".to_string());
+            let new_data = BlockData {
+                name: data.name.clone(),
+                properties: Some(props),
+            };
+            world.set_block_and_fetch(pos.x, pos.y, pos.z, &pos.dimension, new_data)?;
+        }
+    } else if moisture > 0 {
+        props.insert("moisture".to_string(), (moisture - 1).to_string());
+        let new_data = BlockData {
+            name: data.name.clone(),
+            properties: Some(props),
+        };
+        world.set_block_and_fetch(pos.x, pos.y, pos.z, &pos.dimension, new_data)?;
+    } else {
+        let above = world.get_block_and_fetch(pos.x, pos.y + 1, pos.z, &pos.dimension)?;
+        if above
+            .to_block_data()
+            .map_or(true, |b| b.name == "minecraft:air")
+        {
+            let dirt = BlockData {
+                name: "minecraft:dirt".to_string(),
+                properties: None,
+            };
+            world.set_block_and_fetch(pos.x, pos.y, pos.z, &pos.dimension, dirt)?;
+        }
+    }
+    Ok(())
+}
+
 /// Helper used by tests or other modules to schedule a tick for a block
 pub fn schedule_block_tick(world: &World, x: i32, y: i32, z: i32, dimension: &str, delay: u32) {
     let block = world
@@ -208,7 +330,7 @@ pub fn schedule_block_tick(world: &World, x: i32, y: i32, z: i32, dimension: &st
 }
 
 /// Helper to register a position for random ticks.
-pub fn schedule_random_tick(world: &World, x: i32, y: i32, z: i32, dimension: &str) {
+pub fn schedule_random_tick(world: &World, x: i32, y: i32, z: i32, dimension: &str, chance: f32) {
     let pos = BlockPos {
         x,
         y,
@@ -216,5 +338,5 @@ pub fn schedule_random_tick(world: &World, x: i32, y: i32, z: i32, dimension: &s
         dimension: dimension.to_string(),
     };
     let mut guard = world.tick_manager.lock().unwrap();
-    guard.schedule_random(pos);
+    guard.schedule_random(pos, chance);
 }

@@ -1,7 +1,9 @@
 pub mod handshake;
+pub mod legacy_server_list_ping;
 pub mod known_packs;
 pub mod login_encryption_response;
 pub mod login_start;
+pub mod custom_query_answer;
 pub mod ping;
 pub mod status_request;
 

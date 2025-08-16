@@ -7,3 +7,5 @@ pub mod login_utils;
 mod offline_login;
 mod player_actions;
 mod recipe_packets;
+mod handshake_legacy_ping;
+mod login_custom_query;

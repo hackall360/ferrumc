@@ -7,10 +7,10 @@ pub mod edit_batch;
 pub mod edits;
 pub mod errors;
 mod importing;
+pub mod recipes;
 pub mod redstone;
 pub mod tick;
 pub mod vanilla_chunk_format;
-pub mod recipes;
 
 use crate::chunk_format::Chunk;
 use crate::errors::WorldError;
@@ -183,8 +183,8 @@ impl World {
     }
 
     /// Register a block position for random ticking.
-    pub fn schedule_random_tick(&self, x: i32, y: i32, z: i32, dimension: &str) {
-        tick::schedule_random_tick(self, x, y, z, dimension);
+    pub fn schedule_random_tick(&self, x: i32, y: i32, z: i32, dimension: &str, chance: f32) {
+        tick::schedule_random_tick(self, x, y, z, dimension, chance);
     }
 
     /// Get cached redstone power level at position.

@@ -550,14 +550,20 @@ mod taped {
                 }
                 NbtTag::IntArray => {
                     let len = i32::parse_from_nbt(tape, NbtDeserializableOptions::None) as usize;
-                    let data = tape.read_n_bytes(len * size_of::<i32>());
-                    let data = arrays::u8_slice_to_i32_be(data);
+                    let raw = tape.read_n_bytes(len * size_of::<i32>());
+                    let data = raw
+                        .chunks_exact(size_of::<i32>())
+                        .map(|chunk| i32::from_be_bytes(chunk.try_into().unwrap()))
+                        .collect();
                     NbtTapeElement::IntArray(data)
                 }
                 NbtTag::LongArray => {
                     let len = i32::parse_from_nbt(tape, NbtDeserializableOptions::None) as usize;
-                    let data = tape.read_n_bytes(len * size_of::<i64>());
-                    let data = arrays::u8_slice_to_i64_be(data);
+                    let raw = tape.read_n_bytes(len * size_of::<i64>());
+                    let data = raw
+                        .chunks_exact(size_of::<i64>())
+                        .map(|chunk| i64::from_be_bytes(chunk.try_into().unwrap()))
+                        .collect();
                     NbtTapeElement::LongArray(data)
                 }
             }
@@ -677,41 +683,14 @@ impl NbtTapeElement<'_> {
             }
             NbtTapeElement::ByteArray(data) => {
                 (data.len() as i32).serialize(writer, &NBTSerializeOptions::None);
-                let data = unsafe { std::mem::transmute::<&[i8], &[u8]>(data) };
-                writer.write_all(data)?;
+                let bytes: Vec<u8> = data.iter().map(|b| *b as u8).collect();
+                writer.write_all(&bytes)?;
                 Ok(())
             }
             NbtTapeElement::String(data) => {
                 data.serialize(writer, &NBTSerializeOptions::None);
-                /*let data = data.as_bytes();
-                (data.len() as u16).serialize(writer, &NBTSerializeOptions::None);
-                writer.write_all(data)?;*/
                 Ok(())
             }
-            /*NbtTapeElement::List {
-                el_type,
-                size,
-                elements_pos,
-            } => {
-                writer.write_all(&[el_type.clone() as u8])?;
-                (*size as i32).serialize(writer, &NBTSerializeOptions::None);
-
-                let start = *elements_pos;
-
-                // rewind tape to the start of the list.
-                tape.pos = start;
-
-                // read the entire list (it returns the entire list)
-                let skipped = tape.skip_list(el_type.clone() as u8, *size);
-
-                let end = start + skipped;
-
-                let data = &tape.data[start..end];
-
-                writer.write_all(data)?;
-
-                Ok(())
-            }*/
             NbtTapeElement::List {
                 el_type,
                 size,
@@ -745,16 +724,16 @@ impl NbtTapeElement<'_> {
             }
             NbtTapeElement::IntArray(data) => {
                 (data.len() as i32).serialize(writer, &NBTSerializeOptions::None);
-                let data = unsafe { std::mem::transmute::<&[i32], &[u32]>(data.as_slice()) };
-                let data = arrays::u32_slice_to_u8_be(data);
-                writer.write_all(data.as_slice())?;
+                let unsigned: Vec<u32> = data.iter().map(|&v| v as u32).collect();
+                let bytes = arrays::u32_slice_to_u8_be(&unsigned);
+                writer.write_all(bytes.as_slice())?;
                 Ok(())
             }
             NbtTapeElement::LongArray(data) => {
                 (data.len() as i32).serialize(writer, &NBTSerializeOptions::None);
-                let data = unsafe { std::mem::transmute::<&[i64], &[u64]>(data.as_slice()) };
-                let data = arrays::u64_slice_to_u8_be(data);
-                writer.write_all(data.as_slice())?;
+                let unsigned: Vec<u64> = data.iter().map(|&v| v as u64).collect();
+                let bytes = arrays::u64_slice_to_u8_be(&unsigned);
+                writer.write_all(bytes.as_slice())?;
                 Ok(())
             }
         }

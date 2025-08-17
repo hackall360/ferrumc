@@ -20,7 +20,8 @@ workspace = true
 criterion = { workspace = true }
 ferrumc-macros = { workspace = true }
 fastnbt = { version = "2.5.0" }
-simdnbt = { git = "https://github.com/azalea-rs/simdnbt", version = "0.7.2" }
+simdnbt = { git = "https://github.com/azalea-rs/simdnbt", tag = "v0.6.1", version = "0.6.1" }
+simd_cesu8 = { version = "1.0.1" }
 crab_nbt = { version = "0.2.1" }
 hematite-nbt = { version = "0.5.2" }
 fastanvil = { version = "0.31.0" }

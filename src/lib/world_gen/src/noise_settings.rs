@@ -23,7 +23,7 @@ pub const OVERWORLD_NOISE_SETTINGS: NoiseSettings = NoiseSettings {
     min_y: -64,
     height: 384,
     xz_scale: 1.0,
-    y_scale: 1.0,
+    y_scale: 2.0,
     xz_factor: 80.0,
     y_factor: 160.0,
 };
@@ -33,7 +33,7 @@ pub const NETHER_NOISE_SETTINGS: NoiseSettings = NoiseSettings {
     min_y: 0,
     height: 128,
     xz_scale: 1.0,
-    y_scale: 3.0,
+    y_scale: 2.0,
     xz_factor: 80.0,
     y_factor: 60.0,
 };

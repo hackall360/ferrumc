@@ -1,8 +1,8 @@
 use crate::biomes::simple::{SimpleBiome, Veg};
 use crate::errors::WorldGenError;
 use crate::noise_settings::END_NOISE_SETTINGS;
+use crate::structures::{temple::Temple, StructurePlacer};
 use crate::{BiomeGenerator, NoiseGenerator};
-use crate::structures::StructurePlacer;
 use ferrumc_world::chunk_format::Chunk;
 
 /// Basic end terrain generator.
@@ -20,14 +20,14 @@ impl EndGenerator {
             biome: SimpleBiome::new(
                 0,
                 "minecraft:the_end",
-                "end",
+                "the_end",
                 "minecraft:end_stone",
                 "minecraft:end_stone",
                 "minecraft:end_stone",
                 Veg::None,
                 32.0,
             ),
-            structures: vec![],
+            structures: vec![Box::new(Temple)],
             seed,
         }
     }

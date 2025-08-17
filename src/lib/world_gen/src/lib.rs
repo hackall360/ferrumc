@@ -1,9 +1,9 @@
 mod biomes;
+pub mod end;
 pub mod errors;
+pub mod nether;
 mod noise_settings;
 mod structures;
-pub mod nether;
-pub mod end;
 
 use crate::errors::WorldGenError;
 use ferrumc_world::block_id::BlockId;
@@ -53,8 +53,7 @@ impl NoiseGenerator {
     pub fn get_noise(&self, x: f64, z: f64) -> f64 {
         let mut noise = 0.0;
         for (c, layer) in self.layers.iter().enumerate() {
-            let scale =
-                self.settings.xz_factor * self.settings.xz_scale.powi(c as i32 + 1);
+            let scale = self.settings.xz_factor * self.settings.xz_scale.powi(c as i32 + 1);
             noise += layer.get([x / scale, z / scale]);
         }
         noise / (self.layers.len() as f64)
@@ -99,23 +98,36 @@ impl WorldGenerator {
     }
 
     fn apply_surface(&self, chunk: &mut Chunk) {
-        // Ensure a bedrock floor at the bottom of the world for all dimensions
+        // Add bedrock barriers according to the dimension.
         let bedrock = BlockData {
             name: "minecraft:bedrock".into(),
             properties: None,
         };
-        for x in 0..16 {
-            for z in 0..16 {
-                // Errors are ignored as missing sections are non-critical during generation
-                let _ = chunk.set_block(x, 0, z, bedrock.to_block_id());
+        match chunk.dimension.as_str() {
+            // Overworld and End have only a floor layer.
+            "overworld" | "the_end" => {
+                for x in 0..16 {
+                    for z in 0..16 {
+                        // Ignore errors from missing sections; generation proceeds regardless.
+                        let _ = chunk.set_block(x, 0, z, bedrock.to_block_id());
+                    }
+                }
             }
+            // Nether has both a floor and a ceiling layer of bedrock.
+            "the_nether" => {
+                let id = bedrock.to_block_id();
+                for x in 0..16 {
+                    for z in 0..16 {
+                        let _ = chunk.set_block(x, 0, z, id);
+                        let _ = chunk.set_block(x, 127, z, id);
+                    }
+                }
+            }
+            _ => {}
         }
     }
 
     fn apply_carvers(&self, chunk: &mut Chunk) {
-        if chunk.dimension != "overworld" {
-            return;
-        }
         let chunk_x = chunk.x;
         let chunk_z = chunk.z;
         let air = BlockData {
@@ -123,18 +135,41 @@ impl WorldGenerator {
             properties: None,
         };
         let air_id = air.to_block_id();
-        for lx in 0..16 {
-            for lz in 0..16 {
-                let global_x = chunk_x * 16 + lx;
-                let global_z = chunk_z * 16 + lz;
-                let n = self.noise_generator.get_noise(global_x as f64, global_z as f64);
-                if n > 0.65 {
-                    for y in 20..50 {
-                        // Ignore errors from sections that may not exist yet
-                        let _ = chunk.set_block(lx, y, lz, air_id);
+        match chunk.dimension.as_str() {
+            "overworld" => {
+                for lx in 0..16 {
+                    for lz in 0..16 {
+                        let global_x = chunk_x * 16 + lx;
+                        let global_z = chunk_z * 16 + lz;
+                        let n = self
+                            .noise_generator
+                            .get_noise(global_x as f64, global_z as f64);
+                        if n > 0.65 {
+                            for y in 20..50 {
+                                // Ignore errors from sections that may not exist yet
+                                let _ = chunk.set_block(lx, y, lz, air_id);
+                            }
+                        }
                     }
                 }
             }
+            "the_nether" => {
+                for lx in 0..16 {
+                    for lz in 0..16 {
+                        let global_x = chunk_x * 16 + lx;
+                        let global_z = chunk_z * 16 + lz;
+                        let n = self
+                            .noise_generator
+                            .get_noise(global_x as f64, global_z as f64);
+                        if n > 0.55 {
+                            for y in 10..80 {
+                                let _ = chunk.set_block(lx, y, lz, air_id);
+                            }
+                        }
+                    }
+                }
+            }
+            _ => {}
         }
     }
 
@@ -144,10 +179,7 @@ impl WorldGenerator {
                 // Fill oceans with water up to sea level
                 let water = BlockData {
                     name: "minecraft:water".to_string(),
-                    properties: Some(BTreeMap::from([(
-                        "level".to_string(),
-                        "0".to_string(),
-                    )])),
+                    properties: Some(BTreeMap::from([("level".to_string(), "0".to_string())])),
                 };
                 let water_id = water.to_block_id();
                 for x in 0..16 {
@@ -166,10 +198,7 @@ impl WorldGenerator {
                 // Add a lava ocean similar to vanilla behaviour
                 let lava = BlockData {
                     name: "minecraft:lava".to_string(),
-                    properties: Some(BTreeMap::from([(
-                        "level".to_string(),
-                        "0".to_string(),
-                    )])),
+                    properties: Some(BTreeMap::from([("level".to_string(), "0".to_string())])),
                 };
                 let lava_id = lava.to_block_id();
                 for x in 0..16 {
@@ -183,6 +212,9 @@ impl WorldGenerator {
                         }
                     }
                 }
+            }
+            "the_end" => {
+                // The End uses no additional fluid features.
             }
             _ => {}
         }

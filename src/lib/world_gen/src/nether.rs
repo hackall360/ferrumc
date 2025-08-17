@@ -1,8 +1,8 @@
 use crate::biomes::simple::{SimpleBiome, Veg};
 use crate::errors::WorldGenError;
 use crate::noise_settings::NETHER_NOISE_SETTINGS;
+use crate::structures::{temple::Temple, StructurePlacer};
 use crate::{BiomeGenerator, NoiseGenerator};
-use crate::structures::StructurePlacer;
 use ferrumc_world::chunk_format::Chunk;
 
 /// Basic nether terrain generator.
@@ -20,14 +20,14 @@ impl NetherGenerator {
             biome: SimpleBiome::new(
                 0,
                 "minecraft:nether_wastes",
-                "nether",
+                "the_nether",
                 "minecraft:netherrack",
                 "minecraft:netherrack",
                 "minecraft:netherrack",
                 Veg::None,
                 32.0,
             ),
-            structures: vec![],
+            structures: vec![Box::new(Temple)],
             seed,
         }
     }
